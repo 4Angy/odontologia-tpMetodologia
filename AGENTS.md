@@ -51,10 +51,53 @@ Fuente de verdad: `.atl/skill-registry.md` (16 skills indexadas; sin skills de d
 | **Frontend** | React / agenda día-semana / ficha / reserva pública | `impeccable` (pulido UI), registry + KB |
 | **Integraciones** | WhatsApp worker / MP webhooks | `web-scraper` (docs oficiales), registry + KB |
 | **Orquestación** | OPSX / SDD / docs | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `kb-creator`, `roadmap-generator` |
+| **Exploración SDD** | SDD / Explore | `visual-explore-options` |
 
 Cargá la skill correspondiente al contexto ANTES de escribir código.
 
 > Los compact rules de cada skill los resuelve el orquestador desde `.atl/skill-registry.md` (generado por `skill-registry`; no versionado — no está en el repo). Esta tabla solo mapea skill→rol.
+
+### Skill `visual-explore-options`
+
+**Propósito**: Estandarizar la fase `explore` de Spec-Driven Development presentando al menos 2 opciones técnicas con por-qué, cómo se usa y esquema ASCII, pausando por selección del usuario antes de avanzar a `design.md`.
+
+**Cuándo usarla**: Al iniciar la fase de exploración de un cambio que implique decisiones de arquitectura, frontend, backend, base de datos, APIs o componentes.
+
+**Ubicación**: `.opencode/skills/visual-explore-options/SKILL.md` (también replicada en `.devin/skills/`, `.claude/skills/` y `skills/visual-explore-options.md`).
+
+**Invocación**: `@visual-explore-options <contexto del change>`
+
+---
+
+## Integración MCP — Servidor de Archivos (Filesystem)
+
+**Servidor**: `@modelcontextprotocol/server-filesystem` (oficial de Anthropic)
+
+**Propósito**: Permitir al agente leer y explorar archivos y directorios del proyecto (CHANGES.md, ROADMAP.md, knowledge-base/, etc.) sin salir del entorno de chat.
+
+**Capacidades que se usarán**: `read_file`, `list_directory`, `search_files`.
+
+**Límites de acceso**: Solo lectura en carpetas del proyecto; no escritura en archivos sensibles; no acceso a datos reales de pacientes.
+
+**Configuración de ejemplo** (`opencode.jsonc` o equivalente del cliente):
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "filesystem": {
+        "command": "npx",
+        "args": [
+          "@modelcontextprotocol/server-filesystem",
+          "C:\\Users\\Cara Palida\\Documents\\projects\\odontologia-tpMetodologia"
+        ]
+      }
+    }
+  }
+}
+```
+
+**Documentado como integración** (no como skill): El MCP queda registrado en `docs/skills-mcp/investigacion.md` y en este archivo; no se registra como skill en `.atl/skill-registry.md`.
 
 ---
 
