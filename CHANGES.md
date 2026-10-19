@@ -141,7 +141,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > C-04 y C-06 corren en paralelo tras C-03. C-04 alimenta a C-05, C-07, C-09 y C-11 (paciente + opt-in son prerrequisito de turnos, notificaciones y cobros).
 
 ### [C-02] `tenancy-core-models`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[ ]` pendiente de implementación — artefactos SDD listos en `openspec/changes/C-02-tenancy-core-models/` (explore + proposal + design + specs + tasks). **No implementado, no verificado, no archivado.**
 - **Scope**: Modelos base multi-tenant + migraciones iniciales + seed mínimo
   - Modelos: `Tenant` (slug kebab-case único global, tz default `America/Argentina/Buenos_Aires`), `Usuario` (email único por tenant, `roles` array enum, `activo`), `Config` (antelacion_hs default 24, seña, plantillas)
   - `TenantMixin` con `tenant_id NOT NULL + FK`; unicidades y búsquedas siempre compuestas con `tenant_id` (RN-AU-01)
@@ -150,9 +150,13 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Migración 002: crea `usuario` y **extiende** `tenant` (`slug` único, tz, timestamps) y `config` (ya creadas por `0001_cancelacion_turno`); índices `(tenant_id, email)`, `slug`
   - Seed mínimo: 1 tenant demo (`slug: demo`) + 3 usuarios demo (uno por rol y uno con los 3 roles)
   - Tests: aislamiento multi-tenant (un tenant no ve datos de otro), unicidad compuesta, seed idempotente
+  - **Decisiones tomadas en el explore** (`discovery/explore-c02-tenancy-core-models.md`): `002` **altera** y no reconstruye (`0001` no se toca); `roles` como `ARRAY` de enum de Postgres (sin tabla puente, según §04); **repositorios tenant-scoped** — el `UnitOfWork` aplica el filtro y la API del repo no pide `tenant_id` (R1 por construcción), con excepción explícita para el repo global de `tenant`; seed por **comando explícito** `python -m app.seed` (idempotente), nunca automático al arrancar
+  - **Desviaciones a registrar en la KB al implementarlo**: `tenant.id` queda como `String(64)` (no uuid de §04) porque `turno.tenant_id` (FK de `0001`) es `String(64)` — owner C-06/C-07; la columna real es `antelacion_cancel_hs` (no `antelacion_hs` de §04)
 - **Dependencias**: C-01
 - **Governance**: CRITICO (todo el dominio referencia estos modelos; un bug de filtro expone datos cruzados — DD-04)
 - **Leer antes**:
+  - `openspec/changes/C-02-tenancy-core-models/proposal.md` + `design.md` + `specs/tenancy/identidad/spec.md` (decisiones tomadas y contrato de comportamiento)
+  - `discovery/explore-c02-tenancy-core-models.md` (explore con las alternativas y la selección)
   - `knowledge-base/04_modelo_de_datos.md` §tenant + §usuario + §Seed data inicial
   - `knowledge-base/08_arquitectura_propuesta.md` §Patrones (Row-level multi-tenancy, Repository, UoW)
   - `knowledge-base/09_decisiones_y_supuestos.md` §DD-04 (row-level) + §DD-06 (roles acumulables)
