@@ -54,7 +54,7 @@ proyecto/
 
 | Variable | Descripción | Ejemplo | Sensible |
 |----------|-------------|---------|----------|
-| `DATABASE_URL` | Conexión Postgres | `postgresql+asyncpg://u:p@db:5432/odonto` | Y |
+| `DATABASE_URL` | Conexión Postgres | `postgresql+psycopg://u:p@db:5432/odonto` | Y |
 | `REDIS_URL` | Conexión Redis | `redis://redis:6379/0` | Y |
 | `JWT_SECRET` | Firma de tokens | (generado, 64 hex) | Y |
 | `JWT_ACCESS_MIN` / `JWT_REFRESH_DAYS` | Vigencias | `15` / `7` | N |
@@ -67,3 +67,5 @@ proyecto/
 | `SMTP_URL` | Fallback email | `smtp://...` | Y |
 | `PUBLIC_BASE_URL` | Links públicos/WhatsApp | `https://app.ejemplo.com` | N |
 | `SEED_DEMO` | Crea tenant demo | `false` | N |
+
+> **Nota (C-01)**: son **14** variables (no 13). Se cargan con `pydantic-settings` en una clase `Settings` frozen, se validan al boot y la app **falla al arrancar** si falta o es inválida alguna (fail-fast). `JWT_SECRET` no tiene default fuera de `dev`/`test`. Driver: **SQLAlchemy 2.0 sincrónico + psycopg 3** (el repo ya usa `create_engine` síncrono); el trigger de re-evaluación a async es C-13.

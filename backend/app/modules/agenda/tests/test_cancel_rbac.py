@@ -1,18 +1,16 @@
 """Tests de API: RBAC por unión + aislamiento (Task 3.3, RED primero).
 
-4 casos RBAC + 3 de aislamiento. Datos sintéticos (R14).
+4 casos RBAC + 3 de aislamiento. Datos sintéticos (R14). Postgres 16 real
+(esquema aislado por test, fixture compartida de `backend/conftest.py`).
 """
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.main import create_app
 from app.core.security import mint_token
-from app.modules.agenda.models import Base, ConfigModel, TenantModel, TurnoModel
+from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel
 
 TENANT_A = "tenant-demo-a"
 TENANT_B = "tenant-demo-b"
@@ -20,15 +18,11 @@ AHORA = datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture()
-def client():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    s = Session()
+def client(session_factory):
+    s = session_factory()
     for t in (TENANT_A, TENANT_B):
         s.add(TenantModel(id=t, nombre=t))
+        s.flush()  # el tenant debe existir antes que su config (FK real en Postgres)
         s.add(ConfigModel(tenant_id=t, antelacion_cancel_hs=24))
     s.add(TurnoModel(
         id="turno-ajeno", tenant_id=TENANT_A, paciente_id="pac-1",
@@ -50,7 +44,7 @@ def client():
     ))
     s.commit()
     s.close()
-    return TestClient(create_app(session_factory=Session, now_fn=lambda: AHORA))
+    return TestClient(create_app(session_factory=session_factory, now_fn=lambda: AHORA))
 
 
 def _auth(user_id, roles, tenant=TENANT_A):

@@ -1,31 +1,26 @@
 """Tests de repositorio (Task 2.1, RED primero).
 
-TDD estricto, datos sintéticos (R14). SQLite en memoria para hermeticidad;
-el DDL es compatible PostgreSQL (timestamptz, CHECK, server defaults).
+TDD estricto, datos sintéticos (R14). Corre contra Postgres 16 real: la
+sesión la provee la fixture compartida de `backend/conftest.py` (un esquema
+por test).
 """
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from app.modules.agenda.models import Base, ConfigModel, TurnoModel
+from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel
 from app.modules.agenda.repository import ConfigRepository, TurnoRepository
 
 TENANT_A = "tenant-demo-a"
 TENANT_B = "tenant-demo-b"
 
 
-@pytest.fixture()
-def session():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    s = Session()
-    try:
-        yield s
-    finally:
-        s.close()
+def _crear_tenants(session, *tenant_ids):
+    """Crea los tenants. Necesario porque Postgres SÍ valida las FK
+    (`config.tenant_id` -> `tenant.id`), cosa que SQLite no hacía."""
+    for tenant_id in tenant_ids:
+        session.add(TenantModel(id=tenant_id, nombre=tenant_id))
+    session.commit()
 
 
 def _turno(**kw):
@@ -46,6 +41,7 @@ def _turno(**kw):
 
 def test_repo_query_filtra_por_tenant_id_R1(session):
     """R1: un tenant no ve ni cancela turnos de otro tenant."""
+    _crear_tenants(session, TENANT_A, TENANT_B)
     session.add(_turno(id="t-a", tenant_id=TENANT_A))
     session.add(_turno(id="t-b", tenant_id=TENANT_B))
     session.add(ConfigModel(tenant_id=TENANT_A, antelacion_cancel_hs=24))
@@ -65,6 +61,7 @@ def test_repo_query_filtra_por_tenant_id_R1(session):
 
 def test_repo_cancelled_at_se_persiste_utc_aware_R7(session):
     """R7: cancelled_at se persiste y vuelve con timezone (UTC)."""
+    _crear_tenants(session, TENANT_A)
     t = _turno()
     t.estado = "cancelado"
     t.cancelled_by = "user-1"
@@ -88,6 +85,7 @@ def test_repo_config_columna_precisa_y_check_no_negativo(session):
     assert "antelacion_cancel_hs" in cols
     assert "antelacion_hs" not in cols
 
+    _crear_tenants(session, TENANT_A)
     repo = ConfigRepository(session)
     assert repo.get_hs(TENANT_A) is None  # ausente → servicio usa fallback
     repo.upsert(TENANT_A, 12)
@@ -99,6 +97,7 @@ def test_repo_config_columna_precisa_y_check_no_negativo(session):
 
 def test_repo_senia_flag_default_false(session):
     """`senia_pendiente_definicion` DEFAULT FALSE a nivel de columna."""
+    _crear_tenants(session, TENANT_A)
     session.add(_turno())
     session.commit()
     session.expire_all()

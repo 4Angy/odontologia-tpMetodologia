@@ -1,13 +1,10 @@
-export interface ReprogramarAction {
-  type: "reprogramar";
-  hint: string;
-}
+import { apiClient } from "../../shared/api/client";
+import type { ApiErrorAction, ApiErrorBody } from "../../shared/api/client";
 
-export interface ApiErrorBody {
-  code: string;
-  message: string;
-  action?: ReprogramarAction;
-}
+export type { ApiErrorAction, ApiErrorBody };
+
+/** Alias histórico: el slice de agenda nombra así a la acción de reprogramar. */
+export type ReprogramarAction = ApiErrorAction;
 
 export interface TurnoCancelado {
   id: string;
@@ -21,14 +18,12 @@ export interface TurnoCancelado {
 export type CancelarTurnoFn = (turnoId: string, motivo: string) => Promise<TurnoCancelado>;
 
 export async function cancelarTurnoApi(turnoId: string, motivo: string): Promise<TurnoCancelado> {
-  const res = await fetch(`/turnos/${encodeURIComponent(turnoId)}/cancelar`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ motivo }),
-  });
-  const body: unknown = await res.json();
-  if (!res.ok) {
-    throw body as ApiErrorBody;
-  }
-  return body as TurnoCancelado;
+  return apiClient.request<TurnoCancelado>(
+    `/turnos/${encodeURIComponent(turnoId)}/cancelar`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ motivo }),
+    },
+  );
 }

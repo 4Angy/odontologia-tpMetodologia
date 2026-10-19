@@ -1,32 +1,26 @@
 """Tests de API: POST /turnos/:id/cancelar (Task 3.1, RED primero).
 
-TDD estricto, datos sintéticos (R14). TestClient + SQLite en memoria.
+TDD estricto, datos sintéticos (R14). TestClient + Postgres 16 real (esquema
+aislado por test, fixture compartida de `backend/conftest.py`).
 """
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.main import create_app
 from app.core.security import mint_token
-from app.modules.agenda.models import Base, ConfigModel, TenantModel, TurnoModel
+from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel
 
 TENANT_A = "tenant-demo-a"
 AHORA = datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture()
-def client():
-    engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    s = Session()
+def client(session_factory):
+    s = session_factory()
     s.add(TenantModel(id=TENANT_A, nombre="Demo A"))
+    s.flush()  # el tenant debe existir antes que su config (FK real en Postgres)
     s.add(ConfigModel(tenant_id=TENANT_A, antelacion_cancel_hs=24))
     s.add(TurnoModel(
         id="turno-ok", tenant_id=TENANT_A, paciente_id="pac-1",
@@ -49,7 +43,7 @@ def client():
     s.commit()
     s.close()
 
-    app = create_app(session_factory=Session, now_fn=lambda: AHORA)
+    app = create_app(session_factory=session_factory, now_fn=lambda: AHORA)
     return TestClient(app)
 
 

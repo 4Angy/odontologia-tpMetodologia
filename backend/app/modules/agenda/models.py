@@ -3,6 +3,7 @@
 Nota de extensión: C-06/C-07 agregan columnas/tablas SIN re-migrar lo creado
 aquí. `tenant` es mínimo (solo PK para el FK de `turno`); C-02 lo extiende.
 Dinero: no hay montos en este slice (R5 N/A). Datetimes UTC aware (R7).
+La `Base` es la compartida del monolito modular (C-01, `app.core.db`).
 """
 from __future__ import annotations
 
@@ -17,12 +18,10 @@ from sqlalchemy import (
     Text,
     TIMESTAMP,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import TypeDecorator
 
-
-class Base(DeclarativeBase):
-    pass
+from app.core.db import Base
 
 
 class AwareDateTime(TypeDecorator):

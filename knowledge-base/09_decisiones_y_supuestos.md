@@ -8,6 +8,7 @@
 **Alternativas consideradas**: (a) odontograma básico en v1 y recortar caja/señas; (b) v1 solo agenda.
 **Justificación**: el discovery confirma que el dolor pagable es ausentismo + cobro, no clínica; la apuesta es que gestión+cobros 10× mejores compensan. El análisis competitivo (C.4-3) propone el camino progresivo con migración garantizada.
 **Trade-offs aceptados**: fricción comercial contra consultorios que exigen odontograma; posible adelanto a v1 si las demos lo muestran eliminatorio (gatillo definido en análisis D.3).
+**Resolución final (C-01, [ADR-003](../docs/adr/ADR-003-migrabilidad-fdi.md))**: la alternativa (a) queda para v2, pero la migración no es una promesa en prosa — se fija el **contrato de campos migrables** de `evolucion` v1 (incluye `pieza_fdi_slot`/`pieza_fdi_numero` como ancla de la pieza FDI) y el criterio de aceptación + test de proyección sin pérdida que hereda C-05. R1 queda mitigado por escrito.
 
 ### DD-02 — Caja manual sin AFIP/ARCA en v1
 **Decisión**: "facturación" v1 = cobros/saldos/deudas/cierre, sin comprobantes fiscales.
@@ -15,6 +16,7 @@
 **Alternativas consideradas**: (a) FE ARCA en v1; (b) comprobante interno no fiscal en v1.
 **Justificación**: presupuesto/plazo flexibles pero equipo chico; el supuesto de que caja manual no defrauda se valida en entrevistas (SU-03).
 **Trade-offs aceptados**: dueños que necesitan factura electrónica quedan fuera hasta v2; la UI debe declararlo para no defraudar.
+**Resolución final (C-01, [ADR-002](../docs/adr/ADR-002-alcance-facturacion.md))**: la alternativa (b) —recibo interno numerado no fiscal— queda **descartada para v1**. El modelo de `cobros/` es exactamente `cobro` + `cierre_caja` (sin tabla `recibo`, sin campo `numero_comprobante`); la UI declara "caja manual, sin comprobantes fiscales". Si en las demos de D.1 la objeción "necesito un comprobante" aparece repetida, el recibo interno entra como change de v2 con su propio ADR, no como parche de C-01/C-11.
 
 ### DD-03 — Stack FastAPI + React + Postgres + Redis + Docker
 **Decisión**: backend Python FastAPI (JWT, SQLAlchemy) + Postgres + Redis; frontend React+TS+Vite; Docker Compose.
@@ -43,6 +45,13 @@
 **Alternativas consideradas**: (a) 3 usuarios obligatorios; (b) sin roles (todo abierto).
 **Justificación**: fricción cero para el consultorio chico sin resignar permisos cuando crece.
 **Trade-offs aceptados**: auditoría debe registrar rol activo en cada acción para no perder trazabilidad.
+
+### DD-07 — WhatsApp v1 por API oficial (Cloud API de Meta)
+**Decisión**: el proveedor de WhatsApp en v1 es `official` (Cloud API de Meta). Se implementa un único adaptador detrás de la interfaz `WhatsAppClient`; el valor `gateway` sobrevive en el enum `WHATSAPP_PROVIDER` documentado como camino de v2, sin implementar. Detalle completo en [ADR-001](../docs/adr/ADR-001-whatsapp-provider.md).
+**Contexto**: PA-01 estaba abierta; el análisis competitivo muestra que nadie publica costo por mensaje ni distingue API oficial de gateway artesanal (C.3-2) y que la apuesta C.4-1 ("WhatsApp primero, honesto") pide API oficial + costos transparentes + panel de consumo.
+**Alternativas consideradas**: (a) gateway artesanal (Evolution API / Baileys) sobre número propio; (b) ambos adaptadores en v1 con failover.
+**Justificación**: el filtro de calidad del proyecto es costo operativo bajo, y el costo del gateway no es $0: es riesgo de baneo, entregabilidad no garantizada y ausencia de estado de entrega confiable — lo que volvería el panel de consumo de C-09 un estimado en vez de un dato. El costo del camino oficial es dinero, que se puede medir y mostrar.
+**Trade-offs aceptados**: costo variable por mensaje y proceso de aprobación de plantillas que es de Meta, no del equipo (runbook de onboarding por tenant en el ADR); sin failover entre proveedores (el fallback de la KB es email, RN-PA-04). La reversión es cambiar el default del enum, soportado por la interfaz desde el día 1.
 
 ## Supuestos inferidos
 
