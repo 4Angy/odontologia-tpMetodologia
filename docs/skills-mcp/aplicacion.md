@@ -117,7 +117,8 @@ Resultado: 12 paquetes añadidos correctamente.
 | `openspec/changes/archive/2026-10-19-C-01-foundation-setup-decisiones/` | Change C-01 aplicado y archivado (proposal.md, design.md, tasks.md, specs/) |
 | `openspec/changes/C-02-tenancy-core-models/` | Punto 7 del TP: artefactos SDD de C-02 (explore + proposal + design + specs + tasks), **preparado para implementar** (no implementado, no verificado, no archivado) |
 | `discovery/explore-c02-tenancy-core-models.md` | Punto 7 del TP: artefacto del explore de C-02 generado con la skill `visual-explore-options` |
-| `docs/skills-mcp/revision-critica-punto-8.md` | Punto 8 del TP: revisión crítica con evidencia de invocación de skill y de herramienta MCP, y 5 defectos detectados (D1-D5) |
+| `docs/skills-mcp/revision-critica-punto-8.md` | Punto 8 del TP: revisión crítica de C-01, con evidencia de invocación de skill y de herramienta MCP, y 5 defectos detectados (D1-D5) |
+| `docs/skills-mcp/revision-critica-punto-8-c02.md` | Punto 8 del TP: revisión crítica de **C-02** (el change de la consigna), con la evidencia de invocación de la skill y del MCP filesystem, 3 defectos corregidos (contradicción entre specs, plan de migración y seed upstream, detalle de implementación en el spec) y una prueba de borde sobre los límites del validador |
 | `docs/skills-mcp/tools/mcp-fs.js` | Punto 8 del TP: cliente MCP stdio reutilizable, con la raíz del proyecto (evita el shim `npx.cmd` con paths con espacios) |
 | `docs/skills-mcp/mcp-configuracion.md` | Punto 8 del TP: estado real del servidor, causa raíz del fallo de conexión y su corrección (D1) |
 

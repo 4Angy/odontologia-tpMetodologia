@@ -86,6 +86,12 @@ Restricciones que modelan el diseño: **R1/R2** (aislamiento por `tenant_id` del
     - Rationale: DD-04 la ubica como endurecimiento posterior, no día 1, y RLS exige `FORCE ROW LEVEL SECURITY` y políticas por tabla que sólo tienen sentido cuando el modelo esté completo. C-13 es su dueño, y este change deja la base para aplicarla: toda tabla de negocio con `tenant_id` y FK a `tenant`.
     - Alternativa descartada — RLS ahora: sumaría políticas, roles de DB y testing de dos capas de aislamiento en el change que ya es CRITICO, para un beneficio que C-13 recoge igual.
 
+13. **`tenant.slug` termina `NOT NULL` después del backfill, y el seed del slice archivado se actualiza en este change.**
+    - Rationale: **Postgres admite múltiples valores NULL en un índice único** (verificado en la revisión crítica: `CREATE UNIQUE INDEX` sobre una columna nullable acepta N filas con NULL). Un `slug` NULL no dispararía la restricción, así que dos tenants sin slug pasarían el índice y el contrato de "slug único global" quedaría **sin garantía** — y el link público `/r/:slug` no podría resolverlos. Por eso la migración termina con `slug NOT NULL`.
+      Además, `backend/app/modules/agenda/seed_demo.py` —del slice archivado— inserta el tenant demo **sin `slug`** (línea 21: `TenantModel(id=TENANT_DEMO, nombre="Consultorio Demo")`). Con la columna nullable dejaría un tenant sin slug; con la columna NOT NULL el seed archivado rompería con `IntegrityError`. C-02 actualiza ese seed para fijar el `slug` del tenant demo, o difiere el cambio a C-07 con owner explícito. **No puede quedar sin dueño.**
+    - Alternativa descartada — dejar `slug` nullable y confiar en el índice: el índice no protege el caso NULL; el contrato quedaría sin garantía verificable.
+    - Alternativa descartada — índice parcial `WHERE slug IS NOT NULL`: admite los NULL igual de libre; sólo esconde el problema.
+
 ## Risks / Trade-offs
 
 - [Riesgo] Un repositorio nuevo podría forgets el filtro y filtrar datos cruzados → Mitigación: el filtro vive en `BaseRepository` y se aplica solo; el `UnitOfWork` es la única forma de obtener un repositorio, y no expone un constructor público. La excepción global (`tenant`) tiene nombre explícito. Cada módulo nuevo hereda el patrón y C-13 puede verificar que no exista un repo sin scope con un test de arquitectura.
@@ -93,6 +99,7 @@ Restricciones que modelan el diseño: **R1/R2** (aislamiento por `tenant_id` del
 - [Riesgo] La desviación `tenant.id` String(64) vs uuid de §04 puede morder más adelante → Mitigación: anotada en `CHANGES.md` y en la KB con owner (C-06/C-07) y criterio de re-evaluación (cuando el volumen de tenants justifique el cambio y en el mismo paso que `turno.tenant_id`).
 - [Riesgo] `deleted_at` (borrado lógico) puede hacer que los listados olviden filtrar los borrados y muestren filas que "no existen" → Mitigación: el borrado lógico se aplica **sólo** donde una regla de negocio lo pida; el filtro por defecto de `list` excluye `deleted_at IS NOT NULL`, y cualquier excepción (auditoría del dueño) se pide explícitamente.
 - [Riesgo] `roles` como `ARRAY` no se puede indexar para consultar "usuarios con rol X" → Mitigación: la consulta por rol no está en el scope de C-02 (y C-03 no la necesita: el permiso se evalúa sobre el usuario autenticado). Si aparece, se resuelve con un índice GIN en C-03/C-13 o con la tabla puente.
+- [Riesgo] El seed del slice archivado (`backend/app/modules/agenda/seed_demo.py`) inserta un tenant **sin `slug`** → con `slug` NOT NULL el seed rompe con `IntegrityError`; con la columna nullable, el contrato de unicidad global queda sin garantía (Postgres admite N NULL en un índice único) → Mitigación: Decisión 13 — C-02 actualiza ese seed o difiere el cambio a C-07 con owner declarado, más un test que falle si algún tenant queda con `slug` nulo.
 - [Trade-off] Repositorio tenant-scoped → el patrón del slice archivado (`TurnoRepository(session)` con `tenant_id` explícito) queda distinto al nuevo → Se acepta: C-07 re-integrará el slice sobre el patrón nuevo, que es justamente el valor de C-02. El slice archivado sigue funcionando hasta entonces.
 - [Trade-off] Seed por comando → un paso manual en el onboarding → Se compensa con el entrypoint del compose (`docker compose exec api python -m app.seed`) y con `SEED_DEMO` como bandera documentada.
 - [Trade-off] Migración que altera en vez de reconstruir → el esquema de `tenant` queda con columnas de dos procedencias (`0001` y `002`) → Se acepta: la historia de migraciones queda explícita y reversible, que es lo que pide R6.
@@ -101,12 +108,14 @@ Restricciones que modelan el diseño: **R1/R2** (aislamiento por `tenant_id` del
 
 1. **Orden de aplicación** (nada de esto se ejecuta en este change: es el plan para quien lo implemente):
    - `002_tenancy_core_models`:
-     - `ALTER TABLE tenant ADD COLUMN slug text NULL`, `email_contacto text NULL`, `tz text NOT NULL DEFAULT 'America/Argentina/Buenos_Aires'`, `created_at timestamptz NOT NULL DEFAULT now()`.
-     - Backfill: `UPDATE tenant SET slug = <derivado de nombre> WHERE slug IS NULL`.
+     - `ALTER TABLE tenant ADD COLUMN slug text NULL` (nullable **sólo** durante el backfill), `email_contacto text NULL`, `tz text NOT NULL DEFAULT 'America/Argentina/Buenos_Aires'`, `created_at timestamptz NOT NULL DEFAULT now()`.
+     - Backfill determinista: `UPDATE tenant SET slug = <kebab-case derivado de nombre> WHERE slug IS NULL`. Si dos tenants derivan el mismo slug, la migración **falla con un mensaje explícito** en vez de aplicar un índice que no se puede crear, y el operador resuelve el choque a mano.
+     - `ALTER TABLE tenant ALTER COLUMN slug SET NOT NULL` — Postgres admite N valores NULL en un índice único, así que la columna tiene que ser NOT NULL para que "slug único global" sea una garantía y no una intención (Decisión 13).
      - `CREATE UNIQUE INDEX ux_tenant_slug ON tenant (slug)`.
      - `ALTER TABLE config ADD COLUMN senia_requerida boolean NOT NULL DEFAULT false`.
      - `CREATE TABLE usuario (id varchar(64) PK, tenant_id varchar(64) NOT NULL REFERENCES tenant(id), nombre text NOT NULL, email text NOT NULL, password_hash text NOT NULL, roles <array enum> NOT NULL, activo boolean NOT NULL DEFAULT true, created_at timestamptz NOT NULL DEFAULT now())`.
      - `CREATE UNIQUE INDEX ux_usuario_tenant_email ON usuario (tenant_id, email)`.
+     - **Upstream obligatorio**: `backend/app/modules/agenda/seed_demo.py` (slice archivado) inserta el tenant demo **sin `slug`**. Con `slug` NOT NULL el seed rompería con `IntegrityError`: este change lo actualiza para fijar `slug = 'demo'`, o difiere el cambio a C-07 con owner declarado (Decisión 13).
    - `downgrade` revierte **exactamente** lo anterior: borra los índices, la tabla `usuario` y las columnas agregadas (R6). La migración `0001` no se toca en ninguna dirección.
 2. **Sin downtime**: son `ADD COLUMN` con default, `CREATE TABLE` y `CREATE INDEX`; ninguna operación bloquea escrituras de forma significativa en tablas con el volumen de v1.
 3. **Rollback**: `alembic downgrade -1` devuelve el esquema al de `0001`. El código nuevo (repositorios scoped) depende de las columnas nuevas, así que el rollback de código va junto con el de esquema.

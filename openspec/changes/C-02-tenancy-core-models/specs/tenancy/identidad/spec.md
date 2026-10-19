@@ -13,8 +13,8 @@ El sistema SHALL filtrar toda lectura y toda escritura de datos de negocio por e
 #### Scenario: Un tenant no ve los datos de otro (funcionamiento esperado)
 
 - **GIVEN** existen dos tenants `A` y `B`, y el tenant `B` tiene un usuario con el identificador `u-1`
-- **WHEN** el repositorio de usuarios se resuelve para el tenant `A` y se pide el identificador `u-1`
-- **THEN** la consulta no devuelve ninguna fila, y la consulta ejecutada incluye la condición de filtro por el `tenant_id` del tenant `A`
+- **WHEN** el acceso a datos del tenant `A` pide el identificador `u-1`
+- **THEN** no devuelve ninguna fila, y el acceso a datos de negocio no puede obtenerse sin un tenant, de modo que el filtro por tenant forma parte de la construcción del acceso y no de cada consulta
 
 #### Scenario: El mismo identificador existe en dos tenants (borde)
 
@@ -46,13 +46,19 @@ El sistema SHALL identificar a cada tenant por un `slug` en formato kebab-case, 
 
 - **GIVEN** ya existe un tenant con `slug` `clinica-demo`
 - **WHEN** se intenta crear otro tenant con el mismo `slug`
-- **THEN** la creación es rechazada por la restricción de unicidad, y el error identifica la columna `slug` como causante
+- **THEN** la creación es rechazada con un error `409` cuyo cuerpo es `{code, message}` —el código genérico documentado, porque la base de conocimiento no define una regla de negocio para el slug duplicado— y con un mensaje en español-AR que indique que el slug ya está en uso; el detalle técnico de la restricción queda en el log y no en la respuesta
 
 #### Scenario: Slug con formato inválido (borde)
 
 - **GIVEN** se intenta crear un tenant con un `slug` que contiene espacios, mayúsculas o caracteres fuera del alfabeto kebab-case
 - **WHEN** se normaliza y se valida el `slug`
 - **THEN** el sistema lo normaliza a minúsculas y guiones simples, o lo rechaza con un mensaje en español-AR que indique el formato esperado, sin crear el tenant
+
+#### Scenario: Todo tenant tiene slug (borde)
+
+- **GIVEN** se listan los tenants del sistema
+- **WHEN** se inspecciona el `slug` de cada uno
+- **THEN** ninguno está vacío ni es nulo, porque la unicidad global del `slug` no puede garantizarse sobre valores nulos
 
 ### Requirement: Roles acumulables con permiso por unión
 

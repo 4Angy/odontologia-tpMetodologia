@@ -15,6 +15,9 @@
 - [ ] 1.7 Escribir la migración `002_tenancy_core_models` con `upgrade` (ALTER de `tenant` y `config`, CREATE de `usuario`, backfill de `slug`, índices) y `downgrade` que revierte **sólo** lo que `002` añadió, y verificar en rojo que `alembic downgrade -1` sobre el esquema de `0001` no toca `0001`
 - [ ] 1.8 Ejecutar `alembic upgrade head` → `alembic downgrade -1` → `alembic upgrade head` contra Postgres 16 real y verificar que el esquema final coincide con el de `0001` más lo de `002` (R6)
 - [ ] 1.9 Registrar en `CHANGES.md` y en `knowledge-base/04_modelo_de_datos.md` la desviación de `tenant.id` (String(64) en vez de uuid) y el nombre real de la columna `antelacion_cancel_hs`, con owner (C-06/C-07) y criterio de re-evaluación
+- [ ] 1.10 Escribir test en rojo del **escenario 3.3 (borde)**: tras aplicar la migración, ningún tenant queda con `slug` nulo (la columna es NOT NULL) y el seed del slice archivado (`backend/app/modules/agenda/seed_demo.py`) sigue funcionando con el `slug` del tenant demo, y verificar en rojo que hoy el seed insertaría un tenant sin `slug`
+- [ ] 1.11 Actualizar `backend/app/modules/agenda/seed_demo.py` para fijar el `slug` del tenant demo (o diferirlo a C-07 con owner declarado en `CHANGES.md`), y hacer que la migración termine con `ALTER TABLE tenant ALTER COLUMN slug SET NOT NULL` tras el backfill, y verificar que los tests de 1.10 pasan
+- [ ] 1.12 Escribir test en rojo del backfill: si dos tenants existentes derivan el mismo `slug`, la migración **falla con un mensaje explícito** que nombre a los tenants en conflicto (en vez de dejar un índice a medias), y verificar en rojo
 
 ## 2. Mixins, repositorio base y `UnitOfWork` (aislamiento por construcción)
 
@@ -40,6 +43,7 @@
 - [ ] 4.1 Escribir test en rojo del **escenario 3.1 (error de negocio)**: crear un segundo tenant con un `slug` ya existente falla por la restricción de unicidad y el error identifica la columna `slug`, y verificar en rojo
 - [ ] 4.2 Escribir test en rojo del **escenario 3.2 (borde)**: un `slug` con espacios, mayúsculas o caracteres no kebab-case se normaliza a minúsculas y guiones simples, o se rechaza con mensaje en español-AR que indique el formato esperado, sin crear el tenant, y verificar en rojo
 - [ ] 4.3 Implementar la normalización y validación del `slug` (kebab-case) y verificar que los tests de 4.1 y 4.2 pasan
+- [ ] 4.4 Verificar que el error de slug duplicado responde `409` con el cuerpo `{code, message}` del contrato de `foundation/runtime` (código genérico documentado, porque la KB no define un RN para este caso) y con el mensaje en español-AR, y que el detalle técnico de la restricción queda **sólo en el log**, y verificarlo con un test que afirme la forma exacta del cuerpo
 
 ## 5. Roles acumulables y permiso por unión
 
@@ -68,3 +72,4 @@
 - [ ] 8.3 Verificar el ciclo completo de seed sobre el compose: `docker compose exec api python -m app.seed` dos veces, y comprobar que el conteo de tenants y usuarios no cambia entre corridas
 - [ ] 8.4 Ejecutar `openspec validate C-02-tenancy-core-models --strict` y verificar que el change y sus specs validan
 - [ ] 8.5 Revisar contra `knowledge-base/` que no quedó ninguna decisión de dominio sin justificación: `tenant`, `usuario`, `config`, roles, seed y nombre de la columna de anticipación están respaldados por §03, §04, §05, §08 y §09, y actualizar la KB con las desviaciones acordadas (`tenant.id`, `antelacion_cancel_hs`)
+- [ ] 8.6 Verificar de forma cruzada que el spec nuevo no contradice los specs existentes: revisar `openspec/specs/foundation/runtime/spec.md` (sobre de error `{code, message, action?}`) y `openspec/specs/agenda/cancelacion-turno/spec.md` (códigos RN y aislamiento) contra cada escenario de `tenancy/identidad`, y dejar constancia de la revisión en el design
