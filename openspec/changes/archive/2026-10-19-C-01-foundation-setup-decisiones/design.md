@@ -162,7 +162,7 @@ El `HTTPException` con `detail` dict que ya usa `main.py` **se mantiene** (compa
 - **job `backend`**: Python 3.12, `pip install -r backend/requirements.txt`, services `postgres:16` y `redis:7`, y en orden: `alembic upgrade head` → `alembic downgrade -1` → `alembic upgrade head` (prueba R6 de reversibilidad contra Postgres real) → `pytest`.
 - **job `frontend`**: Node 20, `npm ci`, `tsc --noEmit` (R10) → `vitest run`.
 
-Ambos jobs reportan por separado; el workflow no tiene matriz todavía (no hay versiones multiple que probar). Secrets: ninguno.
+Ambos jobs reportan por separado; el workflow no tiene matriz todavía (no hay versiones multiple que probar). Secrets: **ninguno** — el job `backend` no usa secrets de GitHub: la conexión a Postgres 16 y Redis 7 se hace con las credenciales **de los propios service containers del job**, declaradas como variables de entorno del runner (`DATABASE_URL`, `REDIS_URL`, `TEST_DATABASE_URL`) y con un `JWT_SECRET` de CI que no es un secreto real (sólo cumple la regla de arranque de `APP_ENV=test`). El job `frontend` tampoco requiere secrets.
 
 - **Rationale:** el scope pide "jobs paralelos backend/frontend", y correr el ciclo completo de migraciones en CI es la única forma de que R6 sea una garantía y no una intención. Los jobs no se bloquean entre sí, así que el tiempo total es el del job más lento.
 - **Alternativa descartada — un solo job secuencial**: menos YAML, pero el feedback de frontend espera al de backend.
