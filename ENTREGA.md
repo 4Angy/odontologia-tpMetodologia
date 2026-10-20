@@ -7,21 +7,20 @@
 
 ## 1. Integrantes
 
-> **Completar antes de entregar.** Escribí los apellidos tal como deben ir en el nombre del `.zip`.
-
 | Integrante | Contribución principal |
 |---|---|
-| Apellido1, Nombre | _(completar)_ |
-| Apellido2, Nombre | _(completar)_ |
-| Apellido3, Nombre | _(completar)_ |
+| **Herrera, Julieta** | Skill propia `visual-explore-options` (diseño, implementación, registro yadaptación al dominio); exploración de C-01 y C-02 con la skill |
+| **Zalazar, María de los Ángeles** | Configuración e integración del MCP `filesystem` (instalación, diagnóstico del problema de path con espacios, cliente stdio reutilizable, configuración de ejemplo); preparation de los informes de la TP y las evidencias |
+
+**Apellidos para el `.zip`:** `Herrera-Zalazar` → `TP-Skills-MCP-Herrera-Zalazar.zip`
 
 ## 2. Enlaces
 
 | Qué | Enlace |
 |---|---|
 | **Repositorio** | https://github.com/4Angy/odontologia-tpMetodologia |
-| **Commit de entrega** | `4ec1cc5` (C-01 implementado) · `c78cdff` (artefactos de C-02) · `d3e6964` (configuración del MCP y limpieza) · `_<hash final>_` _(completar con el commit final)_ |
-| **Video de demostración** | _(completar: enlace accesible, máx. 5 minutos)_ |
+| **Commit de entrega** | `cb00c44` (registro de skills, README, evidencias y entrega) y el commit final de esta entrega |
+| **Video de demostración** | **No se graba** (decisión del equipo). El repositorio incluye la evidencia en texto de las invocaciones reales, que cubre lo mismo que el video: `docs/skills-mcp/evidencias/` |
 | **Ficha de investigación** | [`docs/skills-mcp/investigacion.md`](docs/skills-mcp/investigacion.md) · [PDF](docs/skills-mcp/TP-investigacion-puntos-1-a-4.pdf) |
 | **Informe de aplicación** | [`docs/skills-mcp/aplicacion.md`](docs/skills-mcp/aplicacion.md) · [PDF](docs/skills-mcp/TP-aplicacion-puntos-5-a-6.pdf) |
 | **Informe del punto 7** (change preparado) | [`docs/skills-mcp/preparacion.md`](docs/skills-mcp/preparacion.md) · [PDF](docs/skills-mcp/TP-preparacion-puntos-7.pdf) |
@@ -109,7 +108,7 @@ cd frontend && npm install && npm test && npm run typecheck && npm run build   #
 El `.zip` se genera con el script del repo (los apellidos se pasan por parámetro):
 
 ```bash
-powershell -ExecutionPolicy Bypass -File docs/skills-mcp/tools/entrega.ps1 -Apellidos "Apellido1-Apellido2-Apellido3"
+powershell -ExecutionPolicy Bypass -File docs/skills-mcp/tools/entrega.ps1 -Apellidos "Herrera-Zalazar"
 ```
 
 Genera `TP-Skills-MCP-<Apellidos>.zip` en la raíz, con la ficha, el informe, los PDFs, `ENTREGA.md` y las evidencias.

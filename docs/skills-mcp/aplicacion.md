@@ -24,11 +24,11 @@
 | `.atl/skill-registry.md` | **Registro de la skill**: nombre, propósito, ubicación, situaciones de uso |
 | `.opencode/`, `.claude/`, `.devin/`, `skills/` | Copias de la skill por agente; el repo queda versionado |
 | `docs/skills-mcp/` | Ficha, este informe, config del MCP, informes de los puntos 7-8, **informe de cumplimiento**, herramientas y evidencias |
-| `ENTREGA.md` + `tools/entrega.ps1` | Entrega (integrantes, repo, commit, video) y empaquetado en un `.zip` único |
+| `ENTREGA.md` + `tools/entrega.ps1` | Entrega (integrantes, repo, commit) y empaquetado en un `.zip` único |
 | `openspec/changes/C-02-tenancy-core-models/` + `discovery/explore-c02-*.md` | Artefactos SDD del change preparado y el artefacto del explore generado con la skill propia |
 | `CHANGES.md` | Referencia del change en el roadmap, con la convención y **sin** marcarlo implementado |
 | `.engram/config.json` | Ata la memoria del proyecto (MCP engram) a este repositorio |
-| `ENTREGA.md` | Entrega del equipo: integrantes, repo, commit, video y reproducción |
+| `ENTREGA.md` | Entrega del equipo: integrantes, repo, commit y reproducción |
 
 ## 3. Revisión crítica
 
@@ -48,4 +48,4 @@ Además, una **prueba de borde** sobre los límites del validador: con el defect
 - El change `C-02` está **preparado, no implementado**: su verificación (13 escenarios) queda como tareas con su comando.
 ## 5. Entrega
 
-`.zip` único `TP-Skills-MCP-<Apellidos>.zip` con esta ficha, este informe, los PDFs, `ENTREGA.md` y las instrucciones de reproducción. El repositorio contiene los artefactos completos. **Pendiente del equipo:** el video de demostración de hasta 5 minutos.
+`.zip` único `TP-Skills-MCP-Herrera-Zalazar.zip` (por `tools/entrega.ps1`) con la ficha, el informe, los PDFs, `ENTREGA.md` y las evidencias. El video no se graba (decisión del equipo): la evidencia en texto de las invocaciones reales lo reemplaza.

@@ -16,8 +16,8 @@ El TP pedía tres cosas: **una skill propia**, **un servidor MCP** y **la prepar
 | MCP `filesystem` (oficial Anthropic) | ✅ **conectado y operativo**, con herramienta real ejecutada | `~/.config/opencode/opencode.json`, `docs/skills-mcp/tools/mcp-fs.js` |
 | Change `C-02` preparado | ✅ 4/4 artefactos, **0/46 tareas** (no implementado, no verificado, no archivado) | `openspec/changes/C-02-tenancy-core-models/` |
 | Revisión crítica | ✅ 8 defectos con antes/después + prueba de borde | `docs/skills-mcp/revision-critica.md` |
-| `.zip` de entrega + `ENTREGA.md` | ⚠️ script y documento listos; falta ejecutarlo con los apellidos | `ENTREGA.md`, `docs/skills-mcp/tools/entrega.ps1` |
-| Video de 5 minutos | ⏳ pendiente del equipo | — |
+| `.zip` de entrega + `ENTREGA.md` | ✅ `TP-Skills-MCP-Herrera-Zalazar.zip` generado por script (32 entradas) | `ENTREGA.md`, `docs/skills-mcp/tools/entrega.ps1` |
+| Video de 5 minutos | ➖ **no se graba** (decisión del equipo); la evidencia en texto de las invocaciones cubre lo mismo | `docs/skills-mcp/evidencias/` |
 
 ---
 
@@ -149,8 +149,8 @@ openspec status --change C-02-tenancy-core-models
 
 ## 8. Limitaciones y pendientes
 
-- **El video de 5 minutos** es el único entregable que no puede producir el agente: requiere grabación del equipo.
-- **El `.zip` final** se genera con el script `docs/skills-mcp/tools/entrega.ps1` una vez conocidos los apellidos; `ENTREGA.md` tiene los marcadores para completar (integrantes, commit de entrega y enlace del video).
+- **El video de 5 minutos no se graba** (decisión del equipo): el repositorio incluye la evidencia en texto de las invocaciones reales, que es lo que el punto 8 pide acreditar.
+- **El `.zip` final** lo genera el script `docs/skills-mcp/tools/entrega.ps1` con los apellidos `Herrera-Zalazar`; `ENTREGA.md` tiene el commit de entrega y los integrantes.
 - **La skill se validó con 6 pruebas de `skill-creator`**, no con usuarios reales de la clínica.
 - **El change C-02 está preparado, no implementado**: sus 46 tareas y la verificación de los 13 escenarios quedan pendientes para la instancia siguiente.
 - **La instancia del MCP que abre el cliente de OpenCode** queda rooteada en el workspace de la sesión; para consultar el repo con la raíz correcta está el cliente stdio incluido.
