@@ -124,6 +124,7 @@ Resultado: 12 paquetes añadidos correctamente.
 | `docs/skills-mcp/revision-critica.md` | Punto 8 del TP: informe de revisión crítica (evidencia de invocación de skill y MCP, 8 defectos con antes/después, prueba de borde) |
 | `docs/skills-mcp/TP-revision-critica-puntos-8.pdf` | Punto 8 del TP: versión PDF de la revisión crítica |
 | `docs/skills-mcp/tools/md2pdf.py` | Generador de PDF de los informes del TP, con el mismo estilo medido sobre los PDFs existentes (A4, margen 45.35 pt, Helvetica/Helvetica-Bold/Courier en WinAnsi) |
+| `.engram/config.json` | Ata la memoria del proyecto (engram) a este repositorio: `{"project_name": "odontologia-tpmetodologia"}`. Sin esto el nombre del proyecto no se puede deducir del directorio de trabajo y hay que declararlo a mano en cada llamada |
 | `docs/skills-mcp/tools/mcp-fs.js` | Punto 8 del TP: cliente MCP stdio reutilizable, con la raíz del proyecto (evita el shim `npx.cmd` con paths con espacios) |
 | `docs/skills-mcp/mcp-configuracion.md` | Punto 8 del TP: estado real del servidor, causa raíz del fallo de conexión y su corrección (D1) |
 

@@ -79,7 +79,7 @@ Se revisaron las 10 secciones de la KB contra el contenido del change. Cada deci
 | `docs/skills-mcp/TP-preparacion-puntos-7.pdf` | Punto 7: versión PDF de este informe |
 | `docs/skills-mcp/tools/mcp-fs.js` | Punto 7: cliente MCP stdio reutilizable con la raíz del proyecto |
 ### Limitaciones
-- Los dos MCP del proyecto siguen con raíces distintas: `engram` resuelve el proyecto por el directorio de la sesión (`Downloads`), no por el repositorio; `filesystem` se consultó con el cliente stdio apuntando a la raíz del repo.
+- Los dos MCP del proyecto resuelven su raíz de forma distinta y ambas quedaron resueltas: `filesystem` se consultó con el cliente stdio apuntando a la raíz del repo, y `engram` queda atado al proyecto por dos vías — `.engram/config.json` en el repo (resolución por `config`) y `ENGRAM_PROJECT` en el server MCP de opencode (resolución por `process_override`). Con eso, una sesión que arranque en este repo escribe y lee memoria del proyecto correcto sin pasar el nombre a mano.
 - El `explore` se apoya en la KB leída por MCP, no en el código de C-03 a C-13, que todavía no existe: por eso el design deja explícitos los non-goals (auth, RLS, catálogo de roles, plantillas).
 - La desviación de `tenant.id` se acepta con owner C-06/C-07 y criterio de re-evaluación; si el volumen de tenants justificara el cambio a uuid, debe migrar también `turno.tenant_id` en el mismo paso.
 - La consigna pide "al menos tres escenarios" y el spec tiene trece: el excedente viene de que cada requirement necesita al menos un caso de funcionamiento y la KB exige cubrir también el error de negocio y el borde.

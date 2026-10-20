@@ -69,28 +69,39 @@ Fue el MCP efectivamente disponible en el catálogo de la sesión. Todas las lla
 
 | # | Solicitud | Resultado obtenido | Aportación al change |
 |---|---|---|---|
-| 1 | `mem_current_project()` | `{"available_projects":["tp1_prog3","plataforma-educativa-freecodecamp","turnos-odontologia"], "error_code":"unknown_project"}` | Detectó que el nombre correcto del proyecto es `turnos-odontologia` (no `odontologia-tpMetodologia`) |
-| 2 | `mem_save({... project:"odontologia-tpMetodologia"})` | `{"error_code":"unknown_project","hint":"Use one of the available_projects values"}` | Fallo informative: obligò a usar el proyecto real |
-| 3 | `mem_save({title:"C-01 foundation: ADR-001/002/003 + esquema y base de datos", type:"decision", project:"turnos-odontologia", content:"**What**/**Why**/**Where**/**Learned**"})` | `{"id":20,"result":"Memory saved","judgment_required":true,"candidates":[3]}` | Persistió las 4 decisiones del explore + la 5ª (esquema de migraciones) + los 5 gotchas |
+| 1 | `mem_current_project()` | `{"error_code":"unknown_project","hint":"Use one of the available_projects values"}` | El proyecto no se puede deducir del directorio de trabajo: el nombre hay que **declararlo** |
+| 2 | `mem_save({... project:"odontologia-tpmetodologia"})` | `{"error_code":"unknown_project","hint":"Use one of the available_projects values"}` | Fallo informativo: obliga a atar el proyecto antes de guardar (solución en §2.2) |
+| 3 | `mem_save({title:"C-01 foundation: ADR-001/002/003 + esquema y base de datos", type:"decision", project:"odontologia-tpmetodologia", content:"**What**/**Why**/**Where**/**Learned**"})` | `{"result":"Memory saved","judgment_required":true,"candidates":[3]}` | Persistió las 4 decisiones del explore + la 5ª (esquema de migraciones) + los 5 gotchas |
 | 4-6 | `mem_judge({judgment_id, relation:"related"/"not_conflict", reason, confidence})` ×3 | `{"judgment_status":"judged"}` ×3 | Resolvió el protocolo de revisión de conflictos: enlazó la decisión con las memorias previas del mismo proyecto |
-| 7 | `mem_save({title:"C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs", type:"decision"})` | `{"id":21,"judgment_required":true}` | Persistió los 6 gotchas no derivables del código |
+| 7 | `mem_save({title:"C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs", type:"decision"})` | `{"result":"Memory saved","judgment_required":true}` | Persistió los 6 gotchas no derivables del código |
 | 8-10 | `mem_judge(...)` ×3 | `{"judgment_status":"judged"}` ×3 | Ídem |
-| 11 | `mem_save({title:"Verify C-01: 3 huecos del spec encontrados y corregidos", type:"bugfix"})` | `{"id":22,"judgment_required":true}` | Persistió los 3 huecos del spec y sus correcciones |
+| 11 | `mem_save({title:"Verify C-01: 3 huecos del spec encontrados y corregidos", type:"bugfix"})` | `{"result":"Memory saved","judgment_required":true}` | Persistió los 3 huecos del spec y sus correcciones |
 | 12-14 | `mem_judge(...)` ×3 | `{"judgment_status":"judged"}` ×3 | Ídem |
 
 **Verificación posterior** (herramientas de lectura del mismo MCP):
 
 ```
-mem_search({ query:"C-01", project:"turnos-odontologia" })
+mem_search({ query:"C-01", project:"odontologia-tpmetodologia" })
 → Found 3 memories:
-  #20 [decision] C-01 foundation: ADR-001/002/003 + esquema y base de datos
-  #21 [decision] C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs
-  #22 [bugfix]   Verify C-01: 3 huecos del spec encontrados y corregidos
+  #33 [decision] C-01 foundation: ADR-001/002/003 + esquema y base de datos
+  #34 [decision] C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs
+  #35 [bugfix]   Verify C-01: 3 huecos del spec encontrados y corregidos
 ```
 
-**Qué aportó al change (honestamente):** el MCP `engram` **no aportó contenido al entregable** — ni una línea del código, de los specs ni de los ADR salió de ahí. Su aportación fue de **trazabilidad y continuidad**: (a) dejó las decisiones y los gotchas fuera del repo, en memoria consultable por sesiones futuras, incluyendo tres trampas que **no** se deducen del código (que `pydantic-settings` lee `os.environ` incluso en `model_validate`; que `pytest.ini` con `addopts=-q` + un `-q` extra produce `-qq` y oculta el resumen en pytest 9; que `model_validate` no coacciona `str` → `ZoneInfo`); (b)اهل obligo a un segundo pase de revisión semántica (`mem_judge`) sobre cada decisión, que fue el que destapó el conflicto de nomenclatura con una memoria previa del mismo proyecto. Es aportación al *proceso*, no al *producto*.
+## 2.2 Atar el proyecto a la memoria (y por qué las llamadas fallaban)
 
-## 2.2 MCP `filesystem` — el del TP: **no estaba conectado** (ver D1)
+Las primeras llamadas al MCP devolvieron `unknown_project`: el nombre del proyecto **no se puede deducir del directorio de trabajo** cuando el repositorio está anidado dentro de otro repositorio (el remoto Git es compartido), y el nombre hay que **declararlo**. La solución son dos piezas, ambas versionadas o globales:
+
+| Pieza | Dónde | Efecto |
+|---|---|---|
+| `.engram/config.json` con `{"project_name": "odontologia-tpmetodologia"}` | **en el repo** | `mem_current_project()` resuelve el proyecto desde el repo: `{"project":"odontologia-tpmetodologia","project_source":"config"}`. El repo queda atado a su propia memoria y `engram sync` versiona las observaciones correctas. |
+| `environment: { ENGRAM_PROJECT: "odontologia-tpmetodologia" }` en el server `engram` de `~/.config/opencode/opencode.json` | global | El proceso del MCP arranca con el proyecto por defecto, sin depender del cwd. La clave `environment` está en el schema de opencode (`McpLocalConfig`). |
+
+Con las dos piezas, `mem_save` acepta `project:"odontologia-tpmetodologia"` ("backed by repo config") y las 13 observaciones del proyecto quedan bajo ese nombre, con sus relaciones y sus pines.
+
+**Qué aportó al change (honestamente):** el MCP `engram` **no aportó contenido al entregable** — ni una línea del código, de los specs ni de los ADR salió de ahí. Su aportación fue de **trazabilidad y continuidad**: (a) dejó las decisiones y los gotchas fuera del repo, en memoria consultable por sesiones futuras, incluyendo tres trampas que **no** se deducen del código (que `pydantic-settings` lee `os.environ` incluso en `model_validate`; que `pytest.ini` con `addopts=-q` + un `-q` extra produce `-qq` y oculta el resumen en pytest 9; que `model_validate` no coacciona `str` → `ZoneInfo`); (b) obligó a un segundo pase de revisión semántica (`mem_judge`) sobre cada decisión, que fue el que destapó el conflicto de nomenclatura con una memoria previa del mismo proyecto. Es aportación al *proceso*, no al *producto*.
+
+## 2.3 MCP `filesystem` — el del TP: **no estaba conectado** (ver D1)
 
 Al revisar la evidencia del punto 6 se comprobó que el servidor MCP elegido por el TP **nunca había estado operativo**. Antes de corregirlo, la invocación real en esta sesión:
 
