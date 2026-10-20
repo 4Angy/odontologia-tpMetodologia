@@ -1,0 +1,25 @@
+﻿=== opencode mcp list ===
+[34mÔùÅ[39m  Ô£ô context7 [90mconnected
+[90mÔöé[39m      [90mhttps://mcp.context7.com/mcp
+[34mÔùÅ[39m  Ô£ô engram [90mconnected
+[90mÔöé[39m      [90mengram mcp
+[34mÔùÅ[39m  Ô£ô filesystem [90mconnected
+[90mÔöé[39m      [90mnode C:\Users\Cara Palida\AppData\Roaming\npm\node_modules\@modelcontextprotocol\server-filesystem\dist\index.js C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia
+[90mÔöö[39m  3 server(s)
+
+=== handshake MCP (initialize -> tools/list -> tools/call read_text_file) ===
+read_text_file(CHANGES.md) -> 395 caracteres devueltos por el server MCP
+primera linea: # CHANGES ÔÇö Secuencia de Implementaci├│n
+
+=== list_directory(knowledge-base) via MCP ===
+[FILE] 01_vision_y_objetivos.md
+[FILE] 02_descripcion_general.md
+[FILE] 03_actores_y_roles.md
+[FILE] 04_modelo_de_datos.md
+[FILE] 05_reglas_de_negocio.md
+[FILE] 06_funcionalidades.md
+[FILE] 07_flujos_principales.md
+[FILE] 08_arquitectura_propuesta.md
+[FILE] 09_decisiones_y_supuestos.md
+[FILE] 10_preguntas_abiertas.md
+[FILE] README.md

@@ -1,0 +1,10 @@
+﻿=== backend: pytest (Postgres 16 real) ===
+75 passed, 1 warning in 9.41s
+
+=== frontend: vitest ===
+Test Files  3 passed (3)
+Tests  10 passed (10)
+=== frontend: typecheck ===
+sin errores de tipos
+=== frontend: npm audit ===
+found 0 vulnerabilities

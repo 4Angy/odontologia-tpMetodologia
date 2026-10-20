@@ -1,0 +1,24 @@
+﻿Experimento: un indice UNIQUE admite multiples valores NULL en PostgreSQL 16.
+Es la base del defecto D2 de la revision critica de C-02: con slug nullable, la
+unicidad global del slug NO queda garantizada.
+
+--- SQL ejecutado ---
+CREATE TABLE exp_slug (id serial primary key, nombre text, slug text);
+INSERT INTO exp_slug (nombre, slug) VALUES ('A','a'), ('B',NULL);
+CREATE UNIQUE INDEX ux_exp_slug ON exp_slug (slug);
+SELECT id, nombre, slug IS NULL AS slug_es_null FROM exp_slug;
+
+--- salida real del servidor ---
+DROP TABLE
+CREATE TABLE
+INSERT 0 2
+CREATE INDEX
+ id | nombre | slug_es_null 
+----+--------+--------------
+  1 | A      | f
+  2 | B      | t
+(2 rows)
+
+
+Conclusion: la fila con slug NULL se inserto sin violar el indice unico.
+Por eso la migracion 002 debe terminar con ALTER COLUMN slug SET NOT NULL.
