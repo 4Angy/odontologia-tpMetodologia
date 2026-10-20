@@ -110,25 +110,29 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > El primer change resuelve PA-01 y PA-02: sin esas dos decisiones el diseño del Sprint 1 no puede arrancar.
 
 ### [C-01] `foundation-setup-decisiones`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-10-19) — `openspec/changes/archive/2026-10-19-C-01-foundation-setup-decisiones/`
 - **Scope**: Scaffolding completo del monorepo + infraestructura base + decisiones bloqueantes documentadas
   - Estructura de directorios según `08_arquitectura_propuesta.md`: `backend/app/{core,modules/{agenda,pacientes,cobros,notificaciones,tenancy},worker,alembic,tests}`, `frontend/src/{features,shared,pages}`, `docker-compose.yml` (api + worker + postgres 16 + redis 7)
-  - `backend/`: FastAPI app mínima con `GET /health`, settings por env vars (13 vars de `08` §Variables de entorno), logger, manejo de errores con `code` trazable a RN-XX (RN-GL-01)
+  - `backend/`: FastAPI app mínima con `GET /health` (liveness) + `GET /health/ready` (readiness: Postgres + Redis), settings por env vars (14 vars canónicas de `08` §Variables de entorno + 2 operativas `APP_ENV`/`LOG_LEVEL`, con validación y fail-fast en boot), logger estructurado sin secretos, manejo de errores con `code` trazable a RN-XX (RN-GL-01)
   - `frontend/`: Vite + React 18 + TypeScript 5 scaffolding, router, api client base
   - `.env.example` en cada sub-proyecto, sin secretos hardcodeados; GitHub Actions CI con jobs paralelos backend/frontend
-  - ADR-001 (resuelve **PA-01**): proveedor WhatsApp v1 — `official` (Cloud API) vs `gateway` artesanal, con tabla de costos por mensaje, entregabilidad, riesgo de baneo y fallback; fija `WHATSAPP_PROVIDER`, `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_ID`
-  - ADR-002 (resuelve **PA-02**): alcance exacto de "facturación" v1 — solo caja manual (RN-CO-01) o recibo interno no fiscal numerado; fija el modelo de `cobros/` para C-11
-  - Registro R1-mitigation: plan de migración v1→v2 garantizada hacia odontograma FDI (qué campos de `evolucion` serán migrables, ver DD-01)
-  - Tests: health check, carga de settings, CI en verde
+  - ADR-001 (resuelve **PA-01**) → **resuelto: `official` (Cloud API de Meta)**, un solo adaptador detrás de la interfaz `WhatsAppClient`; `gateway` queda en el enum documentado como camino de v2, sin implementar. Fija `WHATSAPP_PROVIDER=official`, `WHATSAPP_API_TOKEN`, `WHATSAPP_PHONE_ID`; incluye tabla de costos por mensaje, entregabilidad, riesgo de baneo, fallback a email y runbook de onboarding por tenant (WABA + plantillas preaprobadas). Owner del comportamiento: C-09
+  - ADR-002 (resuelve **PA-02**) → **resuelto: "facturación" v1 = caja manual, sin comprobante**. Sin tabla `recibo` ni campo `numero_comprobante`; el modelo de `cobros/` queda en `cobro` + `cierre_caja` (cierre inmutable RN-CO-04, saldo derivado RN-CO-05) y la UI declara el alcance. El recibo interno numerado (no fiscal) queda como change de v2 con su propio ADR si la objeción aparece en demos. Owner del comportamiento: C-11
+  - ADR-003 (cierra **R1**): contrato de migrabilidad v1→v2 hacia odontograma FDI — lista cerrada de campos de `evolucion` v1 migrables (incluye `pieza_fdi_slot`/`pieza_fdi_numero` como ancla de la pieza) + criterio de aceptación y test de proyección sin pérdida que hereda C-05. Owner del comportamiento: C-05
+  - **Esquema**: se respeta la migración `0001_cancelacion_turno` ya existente como base real del esquema. C-02 pasa a ser la migración `002` (crea `usuario`, extiende `tenant` y `config`) y C-07 pasa a **extender** `turno` en vez de crearla. La numeración 003-012 queda intacta. Deuda anotada: `turno.senia_pendiente_definicion` sobrevive hasta que C-12 lo reemplace por `senia_id`
+  - **Base de datos**: Postgres 16 real en dev (compose) y CI (service container); SQLite queda como atajo para tests unitarios sin DB. SQLAlchemy 2.0 sincrónico + psycopg 3 (el repo ya está comprometido con `create_engine` síncrono); trigger de re-evaluación a async en C-13
+  - Tests: health check, carga de settings (incluye fallo por var inválida), sobre de error `{code, message, action?}`, ciclo `alembic upgrade head → downgrade -1 → upgrade head` contra Postgres real, CI en verde con jobs `backend`/`frontend` en paralelo
 - **Dependencias**: ninguna
 - **Governance**: ALTO (las decisiones PA-01/PA-02 condicionan todo el Sprint 1; el scaffolding solo sería BAJO)
 - **Leer antes**:
+  - `openspec/changes/C-01-foundation-setup-decisiones/proposal.md` + `design.md` (decisiones tomadas: ADR-001/002/003, esquema y base de datos)
+  - `discovery/explore-c01-foundation-setup-decisiones.md` (explore con las alternativas y la selección)
   - `knowledge-base/08_arquitectura_propuesta.md` §Estructura de directorios + §Variables de entorno
   - `knowledge-base/02_descripcion_general.md` §Stack tecnológico
   - `knowledge-base/10_preguntas_abiertas.md` §PA-01 + §PA-02 (las dos decisiones a cerrar aquí)
   - `knowledge-base/09_decisiones_y_supuestos.md` §DD-01 (R1) + §DD-03 (stack)
   - `discovery/analisis-competitivo.md` §C.3-2 (WhatsApp) + §C.4-2 (seña MP)
-- **Riesgos**: R1 (salir sin odontograma cuando los 15 competidores lo tienen) — se mitiga dejando el plan de migración v1→v2 por escrito en este change; si PA-01 elige gateway artesanal, riesgo de baneo que C-09 debe absorber con reintentos + fallback email.
+- **Riesgos**: R1 (salir sin odontograma cuando los 15 competidores lo tienen) — se mitiga con el ADR-003 (contrato de migrabilidad FDI con criterio de aceptación y test de proyección en C-05). PA-01 ya resuelto como `official`: el riesgo residual es el costo por mensaje, mitigado con la tabla de costos del ADR-001 y el panel de consumo de C-09.
 
 ---
 
@@ -137,18 +141,22 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > C-04 y C-06 corren en paralelo tras C-03. C-04 alimenta a C-05, C-07, C-09 y C-11 (paciente + opt-in son prerrequisito de turnos, notificaciones y cobros).
 
 ### [C-02] `tenancy-core-models`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[ ]` pendiente de implementación — artefactos SDD listos en `openspec/changes/C-02-tenancy-core-models/` (explore + proposal + design + specs + tasks). **No implementado, no verificado, no archivado.**
 - **Scope**: Modelos base multi-tenant + migraciones iniciales + seed mínimo
   - Modelos: `Tenant` (slug kebab-case único global, tz default `America/Argentina/Buenos_Aires`), `Usuario` (email único por tenant, `roles` array enum, `activo`), `Config` (antelacion_hs default 24, seña, plantillas)
   - `TenantMixin` con `tenant_id NOT NULL + FK`; unicidades y búsquedas siempre compuestas con `tenant_id` (RN-AU-01)
   - `AuditMixin` (`created_at`, `updated_at`, `deleted_at`), `BaseRepository[T]`, `UnitOfWork`
   - Middleware de tenant obligatorio: sin `tenant_id` del JWT → 403 (RN-AU-01); paginación cursor/limit base
-  - Migración 001: tablas `tenant`, `usuario`, `config`; índices `(tenant_id, email)`, `slug`
+  - Migración 002: crea `usuario` y **extiende** `tenant` (`slug` único, tz, timestamps) y `config` (ya creadas por `0001_cancelacion_turno`); índices `(tenant_id, email)`, `slug`
   - Seed mínimo: 1 tenant demo (`slug: demo`) + 3 usuarios demo (uno por rol y uno con los 3 roles)
   - Tests: aislamiento multi-tenant (un tenant no ve datos de otro), unicidad compuesta, seed idempotente
+  - **Decisiones tomadas en el explore** (`discovery/explore-c02-tenancy-core-models.md`): `002` **altera** y no reconstruye (`0001` no se toca); `roles` como `ARRAY` de enum de Postgres (sin tabla puente, según §04); **repositorios tenant-scoped** — el `UnitOfWork` aplica el filtro y la API del repo no pide `tenant_id` (R1 por construcción), con excepción explícita para el repo global de `tenant`; seed por **comando explícito** `python -m app.seed` (idempotente), nunca automático al arrancar
+  - **Desviaciones a registrar en la KB al implementarlo**: `tenant.id` queda como `String(64)` (no uuid de §04) porque `turno.tenant_id` (FK de `0001`) es `String(64)` — owner C-06/C-07; la columna real es `antelacion_cancel_hs` (no `antelacion_hs` de §04)
 - **Dependencias**: C-01
 - **Governance**: CRITICO (todo el dominio referencia estos modelos; un bug de filtro expone datos cruzados — DD-04)
 - **Leer antes**:
+  - `openspec/changes/C-02-tenancy-core-models/proposal.md` + `design.md` + `specs/tenancy/identidad/spec.md` (decisiones tomadas y contrato de comportamiento)
+  - `discovery/explore-c02-tenancy-core-models.md` (explore con las alternativas y la selección)
   - `knowledge-base/04_modelo_de_datos.md` §tenant + §usuario + §Seed data inicial
   - `knowledge-base/08_arquitectura_propuesta.md` §Patrones (Row-level multi-tenancy, Repository, UoW)
   - `knowledge-base/09_decisiones_y_supuestos.md` §DD-04 (row-level) + §DD-06 (roles acumulables)
@@ -239,7 +247,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Cancelación: valida antelación contra config (RN-AG-01/02); fuera de término → error `code: RN-AG-01` + oferta de reprogramar; reprogramar arrastra seña (RN-AG-05, ejecutado en C-12)
   - Idempotency keys en creación de turnos (doble-clic no duplica)
   - Frontend: vista día/semana multi-profesional, alta de turno con huecos propuestos, gestión del día (presente/ausente), cancelación con mensaje de error mostrable en español-AR (RN-GL-01)
-  - Migración 006: tabla `turno`; índices `(tenant_id, profesional_id, inicio)`, `(tenant_id, inicio)`
+  - Migración 006: **extiende** `turno` (ya creada por `0001_cancelacion_turno`) con `token_publico`, `origen`, `senia_id`; índices `(tenant_id, profesional_id, inicio)`, `(tenant_id, inicio)`
   - Tests: solape rechaza + sugiere 3 huecos, sobreturno exige motivo y permiso, cancelación <24h devuelve `RN-AG-01`, idempotencia
 - **Dependencias**: C-04, C-06
 - **Governance**: ALTO (máquina de estados del turno + errores trazables RN-XX que ven los usuarios)

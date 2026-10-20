@@ -2,21 +2,24 @@
 
 - Tenant SIEMPRE del JWT validado (R2).
 - Sin/inválido JWT → 403 (RN-AU-01: sin tenant no hay respuesta útil).
+- El secreto de firma viene de la configuración validada (C-01): no hay
+  secretos hardcodeados en el repositorio.
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 
 import jwt
 from fastapi import Depends, HTTPException, Request
 
+from app.core.config import get_settings
+
 JWT_ALG = "HS256"
 
 
 def _secret() -> str:
-    """Secreto del entorno con fallback solo-local para dev/tests."""
-    return os.getenv("JWT_SECRET", "dev-secret-cambiar")
+    """Secreto de firma desde la configuración validada."""
+    return get_settings().jwt_secret_plain()
 
 
 @dataclass(frozen=True)

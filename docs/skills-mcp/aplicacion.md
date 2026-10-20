@@ -1,89 +1,51 @@
-# Informe de Aplicación — Skills y MCP (hasta punto 6 del TP)
+# Informe de Aplicación — Skills y MCP (puntos 5 a 6)
 
-## Proyecto
-SaaS multi-tenant de gestión para consultorios odontológicos (Argentina)
+**Proyecto:** SaaS multi-tenant de gestión para consultorios odontológicos (Argentina) · **Fecha:** 2026-10-19
+**Detalle ampliado:** `preparacion.md` (punto 7) · `revision-critica.md` (punto 8) · `revision-critica-punto-8*.md` (evidencia) · `mcp-configuracion.md` (config del MCP) · `evidencias/` (registros)
 
-## Fecha
-2026-10-17
+## 1. Resultados por consigna
 
-## Alcance cumplido (Puntos 1 al 6 del TP)
+| Punto | Qué se hizo | Evidencia |
+|---|---|---|
+| 1 · Necesidad real | Skill para estandarizar el `explore` (comparar opciones y **detenerse** a esperar al usuario) + MCP para consultar la KB sin salir del chat; ambos aplicados al mismo change | `investigacion.md` §1-§2 |
+| 2 · Skill creadora | `skill-creator` (OpenCode) instalada y usada; 6 pruebas (3 con skill + 3 baseline) → **con skill 15/15 (100 %) vs. baseline 6/15 (40 %)** | `investigacion.md` §3, §7 |
+| 3 · MCP | Filesystem Server vs GitHub Server en 7 dimensiones y elección justificada; configuración y **herramienta real ejecutada** | `investigacion.md` §4, `mcp-configuracion.md` |
+| 4 · Ficha | `investigacion.md` (≤2 páginas) con los 7 elementos exigidos y fuentes con URL y fecha | este repo |
+| 5 · Skill propia | `visual-explore-options` creada, adaptada e instalada en 4 rutas del repo + global; registrada en `.atl/skill-registry.md`; `AGENTS.md` actualizado | `AGENTS.md`, `.atl/skill-registry.md` |
+| 6 · MCP | Servidor **conectado y operativo** (`opencode mcp list` → 3 servidores) + cliente stdio para leer el repo | `mcp-configuracion.md`, `tools/mcp-fs.js` |
+| 7 · Change | `C-02 tenancy-core-models` preparado (explore + proposal + design + spec de 13 escenarios + 46 tareas), **sin implementar** | `preparacion.md` |
+| 8 · Revisión | Evidencia de invocación de skill y MCP + **8 defectos** con antes/después | `revision-critica.md` |
 
-### Punto 1 — Identificar una necesidad real
-
-**Necesidad**: Estandarizar la fase `explore` de Spec-Driven Development (SDD) para que el agente presente opciones técnicas con por-qué, cómo y esquema visual, y se detenga en pausa obligatoria antes de generar `design.md`.
-
-**Evidencia**: Skill `visual-explore-options` creada con plantilla exacta y pausa obligatoria.
-
-### Punto 2 — Investigar cómo crear una skill
-
-**Investigación**: Se revisó la documentación oficial de OpenCode V2 (skills, commands, config). Se identificó que una skill requiere `SKILL.md` con frontmatter `name` + `description`, ubicado en `~/.config/opencode/skills/`, `.opencode/skills/`, `.claude/skills/` o `.agents/skills/`.
-
-**Evidencia**: Archivos `SKILL.md` creados en las 4 ubicaciones del proyecto y global.
-
-### Punto 3 — Investigar y seleccionar un servidor MCP
-
-**Comparación**: Filesystem Server (oficial Anthropic, sin credenciales, local) vs GitHub Server (requiere token, dependencia de internet).
-
-**Elección**: Filesystem Server.
-
-**Evidencia**: `docs/skills-mcp/investigacion.md` sección 4.
-
-### Punto 4 — Elaborar la ficha de investigación
-
-**Archivo**: `docs/skills-mcp/investigacion.md` (hasta dos páginas, con necesidad, change elegido, skill creadora, comparación MCP, pasos de instalación, archivos de la fundación, fuentes).
-
-**Evidencia**: Archivo creado en `docs/skills-mcp/investigacion.md`.
-
-### Punto 5 — Crear e integrar la skill propia
-
-**Skill creada**: `visual-explore-options`
-
-**Ubicaciones instaladas**:
-- `C:\Users\Cara Palida\Downloads\odontologia-tpMetodologia-main\odontologia-tpMetodologia-main\.opencode\skills\visual-explore-options\SKILL.md`
-- `...\.devin\skills\visual-explore-options\SKILL.md`
-- `...\.claude\skills\visual-explore-options\SKILL.md`
-- `...\skills\visual-explore-options.md`
-- Global: `C:\Users\Cara Palida\.config\opencode\skills\visual-explore-options\SKILL.md`
-
-**AGENTS.md actualizado**: Tabla de skills disponibles + sección dedicada a `visual-explore-options` + sección de integración MCP.
-
-**Evidencia de uso**: Se generaron 6 pruebas (3 with_skill + 3 baseline) con skill-creator. Resultado: with_skill 15/15 (100%) vs baseline 6/15 (40%) en assertions de plantilla, ASCII, pausa obligatoria y recomendación.
-
-### Punto 6 — Configurar e integrar el MCP
-
-**Servidor**: `@modelcontextprotocol/server-filesystem`
-
-**Configuración**: Documentada en `docs/skills-mcp/mcp-configuracion.md` con comando `npx`, args de carpeta del proyecto, y JSON de ejemplo sin secretos.
-
-**Comprobación**: Documentada como paso pendiente de ejecución real en el entorno del usuario (requiere instalación local de npm).
-
-**Evidencia**: `docs/skills-mcp/mcp-configuracion.md`.
-
-## Archivos modificados y motivo
+## 2. Archivos modificados y motivo
 
 | Archivo | Motivo |
-|---------|--------|
-| `AGENTS.md` | Agregar `visual-explore-options` a skills disponibles y sección de integración MCP |
-| `docs/skills-mcp/investigacion.md` | Crear ficha de investigación (TP punto 4) |
-| `docs/skills-mcp/mcp-configuracion.md` | Crear configuración del MCP (TP punto 6) |
-| `.opencode/skills/visual-explore-options/SKILL.md` | Instalar skill en proyecto |
-| `.devin/skills/visual-explore-options/SKILL.md` | Replicar skill para Devin |
-| `.claude/skills/visual-explore-options/SKILL.md` | Replicar skill para Claude |
-| `skills/visual-explore-options.md` | Copia plana en skills/ del proyecto |
+|---|---|
+| `AGENTS.md` | Skills (cuándo usarla, qué necesita, cómo revisar) e integración MCP (propósito, capacidades, momento de uso, límites) |
+| `.atl/skill-registry.md` | **Registro de la skill**: nombre, propósito, ubicación, situaciones de uso |
+| `.opencode/`, `.claude/`, `.devin/`, `skills/` | Copias de la skill por agente; el repo queda versionado |
+| `docs/skills-mcp/` | Ficha, este informe, config del MCP, informes de los puntos 7-8, **informe de cumplimiento**, herramientas y evidencias |
+| `ENTREGA.md` + `tools/entrega.ps1` | Entrega (integrantes, repo, commit) y empaquetado en un `.zip` único |
+| `openspec/changes/C-02-tenancy-core-models/` + `discovery/explore-c02-*.md` | Artefactos SDD del change preparado y el artefacto del explore generado con la skill propia |
+| `CHANGES.md` | Referencia del change en el roadmap, con la convención y **sin** marcarlo implementado |
+| `.engram/config.json` | Ata la memoria del proyecto (MCP engram) a este repositorio |
+| `ENTREGA.md` | Entrega del equipo: integrantes, repo, commit y reproducción |
 
-## Revisión crítica
+## 3. Revisión crítica
 
-**Omisión detectada**: La skill `visual-explore-options` no aparece como entrada de tabla en `.atl/skill-registry.md` porque ese archivo es gestionado por el orquestador (no versionado). Se documentó como pendiente.
+**Ocho defectos detectados y corregidos**, con antes/después en `revision-critica.md`. Los de mayor gravedad:
 
-**Corrección aplicada**: Se agregó la skill manualmente a la tabla de "Skills Disponibles" en `AGENTS.md` y se documentó la ubicación en todas las rutas de descubrimiento.
+1. **El MCP filesystem declaraba "OPERATIVO" sin estar conectado.** Causa raíz doble: la entry estaba en `opencode.jsonc` (que el cliente **no lee**) y usaba `npx`, cuyo shim en Windows parte el path con espacios. Corregido con `node` + entry absoluto en el config activo; verificado con `opencode mcp list` y un handshake JSON-RPC.
+2. **El spec de C-02 contradecía el contrato de error** ya archivado en `foundation/runtime` (`{code, message, action?}`): pedía "identificar la columna causante", un campo que el envelope no tiene. Verificado que **ninguno de los 24 RN** de la KB cubre ese caso → corresponde el código genérico.
+3. **La migración `002` dejaba `slug` nullable** y no contemplaba el seed del slice archivado. Verificado sobre Postgres 16 real que un índice único admite **múltiples NULL**: la unicidad global quedaba sin garantía.
+4. **El agente introdujo dos CVE moderados** al agregar `react-router-dom` 6.x; actualizados a 7.18.4 y vitest 5.0.5 → `npm audit` en 0.
 
-## Limitaciones
+Además, una **prueba de borde** sobre los límites del validador: con el defecto 2 presente, `openspec validate --strict` reportaba el change como válido. Por eso la verificación cruzada quedó escrita como tarea del change y no como confianza en la herramienta.
 
-- El servidor MCP no se pudo ejecutar realmente en este entorno (requiere instalación local de npm y configuración del cliente OpenCode).
-- La conexión real y ejecución de una herramienta MCP quedan pendientes para el usuario.
-- El registro en `.atl/skill-registry.md` es gestionado por el orquestador y no se versiona.
-- La selección del change se realiza en el punto 7 del TP (pendiente).
+## 4. Limitaciones
 
-## Conclusión
+- La instancia del MCP filesystem que abre el cliente de OpenCode queda rooteada en el workspace de la sesión, no en el repo: por eso se incluye `tools/mcp-fs.js`, un cliente stdio con la raíz correcta. `engram` resuelve el proyecto por `.engram/config.json` y por `ENGRAM_PROJECT` en la config del cliente.
+- La skill se probó con 6 casos de `skill-creator`; no hay evaluación con usuarios reales de la clínica.
+- El change `C-02` está **preparado, no implementado**: su verificación (13 escenarios) queda como tareas con su comando.
+## 5. Entrega
 
-Se completaron los puntos 1 al 6 del TP: necesidad identificada, change candidato declarado (`C-01 foundation-setup-decisiones` para el punto 7), skill `visual-explore-options` creada e integrada en el proyecto, servidor MCP seleccionado y documentado, ficha de investigación elaborada, y configuración del MCP documentada. La skill está disponible para cualquier agente que trabaje en el proyecto mediante `@visual-explore-options`.
+`.zip` único `TP-Skills-MCP-Herrera-Zalazar.zip` (por `tools/entrega.ps1`) con la ficha, el informe, los PDFs, `ENTREGA.md` y las evidencias. El video no se graba (decisión del equipo): la evidencia en texto de las invocaciones reales lo reemplaza.
