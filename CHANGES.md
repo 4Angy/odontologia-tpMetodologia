@@ -164,7 +164,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: aislamiento roto por olvidar `tenant_id` en una query (mitigación: middleware + tests de aislamiento obligatorios en cada change posterior); RLS Postgres queda como endurecimiento post-v1, no día 1.
 
 ### [C-03] `auth-rbac-multirole`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado y verificado (2026-11-01)
 - **Scope**: Autenticación JWT con RBAC acumulable + shell mínima del frontend (US-011)
   - `POST /auth/login` (email + password; 401 genérico sin revelar existencia; 403 si usuario inactivo), `POST /auth/refresh` (rotación con blacklist del anterior, reuse → revocación de familia RN-AU-02), `POST /auth/logout`, `GET /me`, `POST /auth/password-reset` (token 1h), `POST /users/invite` + `GET /users` (solo `dueno`)
   - JWT: access 15 min + refresh 7 días; claims `sub`, `tenant_id`, `roles`, `email`, `jti`, `type`, `iat`, `exp`; refresh en cookie HttpOnly (secure, samesite=lax); rate limiting 5/60s por IP+email en login

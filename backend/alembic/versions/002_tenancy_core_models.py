@@ -25,11 +25,18 @@ def _slug_value(value: str) -> str:
     return slug
 
 
+def _has_column(inspector, table_name: str, column_name: str) -> bool:
+    return any(
+        column["name"] == column_name
+        for column in inspector.get_columns(table_name)
+    )
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
-    if not inspector.has_column("tenant", "slug"):
+    if not _has_column(inspector, "tenant", "slug"):
         op.add_column("tenant", sa.Column("slug", sa.String(100), nullable=True))
 
     """Backfill explícito; si hay conflictos, falla con un mensaje que nombra los tenants."""
@@ -60,9 +67,9 @@ def upgrade() -> None:
     )
     op.execute("ALTER TABLE tenant ALTER COLUMN slug SET NOT NULL")
 
-    if not inspector.has_column("tenant", "email_contacto"):
+    if not _has_column(inspector, "tenant", "email_contacto"):
         op.add_column("tenant", sa.Column("email_contacto", sa.String(255), nullable=True))
-    if not inspector.has_column("tenant", "tz"):
+    if not _has_column(inspector, "tenant", "tz"):
         op.add_column(
             "tenant",
             sa.Column(
@@ -72,16 +79,16 @@ def upgrade() -> None:
                 server_default="America/Argentina/Buenos_Aires",
             ),
         )
-    if not inspector.has_column("tenant", "created_at"):
+    if not _has_column(inspector, "tenant", "created_at"):
         op.add_column(
             "tenant",
             sa.Column(
                 "created_at",
                 sa.TIMESTAMP(timezone=True),
                 nullable=False,
-                server_default=sa.text("CURRENT_TIMESTAMP"),
             ),
         )
+        op.execute("ALTER TABLE tenant ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP")
 
     if not inspector.has_table("usuario"):
         op.create_table(
@@ -97,19 +104,19 @@ def upgrade() -> None:
                 "created_at",
                 sa.TIMESTAMP(timezone=True),
                 nullable=False,
-                server_default=sa.text("CURRENT_TIMESTAMP"),
             ),
             sa.Column(
                 "updated_at",
                 sa.TIMESTAMP(timezone=True),
                 nullable=False,
-                server_default=sa.text("CURRENT_TIMESTAMP"),
             ),
             sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
         )
         op.create_index("ux_usuario_tenant_email", "usuario", ["tenant_id", "email"], unique=True)
+        op.execute("ALTER TABLE usuario ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP")
+        op.execute("ALTER TABLE usuario ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP")
 
-    if not inspector.has_column("config", "senia_requerida"):
+    if not _has_column(inspector, "config", "senia_requerida"):
         op.add_column(
             "config",
             sa.Column("senia_requerida", sa.Boolean(), nullable=False, server_default=sa.false()),
@@ -129,9 +136,9 @@ def downgrade() -> None:
     if inspector.has_index("ux_tenant_slug", "tenant"):
         op.drop_index("ux_tenant_slug", table_name="tenant")
 
-    if inspector.has_column("config", "senia_requerida"):
+    if _has_column(inspector, "config", "senia_requerida"):
         op.drop_column("config", "senia_requerida")
 
     for column_name in ("created_at", "tz", "email_contacto", "slug"):
-        if inspector.has_column("tenant", column_name):
+        if _has_column(inspector, "tenant", column_name):
             op.drop_column("tenant", column_name)

@@ -3,13 +3,24 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AppRutas } from "../App";
 import { AppShell } from "../shared/ui/AppShell";
+import { AuthProvider, type AuthUser } from "../features/auth/auth";
+
+const usuarioDemo: AuthUser = {
+  sub: "u-demo",
+  email: "demo@demo.com",
+  nombre: "Demo",
+  roles: ["recepcion", "odontologo", "dueno"],
+  permisos: [],
+};
 
 function renderEn(ruta: string): void {
   render(
     <MemoryRouter initialEntries={[ruta]}>
-      <AppShell>
-        <AppRutas />
-      </AppShell>
+      <AuthProvider initialUser={usuarioDemo}>
+        <AppShell>
+          <AppRutas />
+        </AppShell>
+      </AuthProvider>
     </MemoryRouter>,
   );
 }

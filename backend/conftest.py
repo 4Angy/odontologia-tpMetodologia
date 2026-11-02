@@ -60,9 +60,10 @@ def db_engine() -> Iterator[Engine]:
 
     with engine.begin() as conexion:
         conexion.execute(text(f'CREATE SCHEMA "{esquema}"'))
+        conexion.execute(text(f'SET search_path TO "{esquema}"'))
 
-    @event.listens_for(engine, "connect")
-    def _search_path(dbapi_connection, connection_record):  # noqa: ANN001, ARG001
+    @event.listens_for(engine, "checkout")
+    def _search_path(dbapi_connection, connection_record, connection_proxy):  # noqa: ANN001, ARG001
         with dbapi_connection.cursor() as cursor:
             cursor.execute(f'SET search_path TO "{esquema}"')
 

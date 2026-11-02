@@ -76,11 +76,14 @@ export class ApiClient {
     const controlador = new AbortController();
     const temporizador = setTimeout(() => controlador.abort(), this.timeoutMs);
     try {
+      const headers = new Headers(init.headers);
+      if (!headers.has("Accept")) headers.set("Accept", "application/json");
       const respuesta = await this.fetchImpl(this.url(path), {
         method: "GET",
         ...init,
+        credentials: init.credentials ?? "include",
         signal: init.signal ?? controlador.signal,
-        headers: { Accept: "application/json", ...(init.headers ?? {}) },
+        headers,
       });
       const cuerpo = await this.leerCuerpo(respuesta);
       if (!respuesta.ok) {

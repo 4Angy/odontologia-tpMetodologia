@@ -157,3 +157,19 @@ El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 ```
 
 Aplicar TODAS las reglas duras en cada paso. Ante conflicto entre la KB y este archivo, las reglas duras prevalecen.
+
+---
+
+## Integración MCP — Redis (Parte B)
+
+**Propósito:** Inspeccionar claves, colas y scheduled jobs de Redis para validar idempotencia de webhooks (R8) y estado de notificaciones (C-9).
+
+**Capacidades que se usarán:** `GET`, `SET`, `KEYS`, `LLEN`, `LRANGE`, `ZRANGE`, `INFO`.
+
+**Momento de uso:** Durante la preparación e implementación de changes que usen Redis (C-9, C-11, C-12).
+
+**Límites de acceso:** Solo base de datos de prueba (puerto 6380); nunca producción. No almacenar datos reales de pacientes (R14). No credenciales en el repo.
+
+**Documentación detallada:** `docs/skills-mcp/mcp-redis-integracion.md`
+
+> Documentado como integración MCP; no se registra como skill en `.atl/skill-registry.md`.

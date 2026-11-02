@@ -13,6 +13,7 @@ from typing import Any, Callable, Mapping
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import sessionmaker
 
 from app import deps
 from app.core.config import SERVICE_NAME, SERVICE_VERSION, ConfigError, get_settings
@@ -24,6 +25,8 @@ from app.core.errors import (
 )
 from app.core.logging import configure_logging, log_event
 from app.modules.agenda.router import router as agenda_router
+from app.modules.auth.router import router as auth_router
+from app.modules.tenancy.router import router as tenancy_router
 
 logger = logging.getLogger("odontologia.api")
 
@@ -89,6 +92,8 @@ def create_app(
                 s.close()
 
         app.dependency_overrides[deps.get_session] = _session_override
+    else:
+        app.state.session_factory = sessionmaker(bind=deps.get_engine())
 
     if now_fn is not None:
         app.dependency_overrides[deps.get_now] = now_fn
@@ -193,6 +198,8 @@ def create_app(
         )
 
     app.include_router(agenda_router)
+    app.include_router(auth_router)
+    app.include_router(tenancy_router)
     return app
 
 
