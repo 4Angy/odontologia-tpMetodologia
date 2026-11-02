@@ -73,8 +73,13 @@ npm install -g @modelcontextprotocol/server-filesystem
   ]
 }
 
-# Comprobar la conexión y ejecutar una herramienta real:
+# Comprobar la conexión:
 opencode mcp list
+
+# Ver INIT y la lista de herramientas del server (lo que mcp-fs.js no imprime):
+node docs/skills-mcp/tools/mcp-handshake.js "<ruta del repositorio>"
+
+# Ejecutar una herramienta real (mcp-fs.js imprime sólo su resultado):
 node docs/skills-mcp/tools/mcp-fs.js "<ruta del repositorio>" read_text_file
 ```
 

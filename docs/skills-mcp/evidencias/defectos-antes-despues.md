@@ -1,11 +1,11 @@
 # Defectos detectados en los resultados del agente — antes y después
 
-Ocho incidencias detectadas en la ejecución del agente (6 en C-01, 3 en C-02, con una compartida). Todas corregidas y verificadas. Fuentes de las correcciones: el spec como contrato, la KB como autoridad del dominio, el schema de la herramienta y la semántica real del motor.
+Ocho incidencias detectadas en la ejecución del agente (5 en C-01 (D1 a D5) y 3 en C-02 (D6 a D8)). Todas corregidas y verificadas. Fuentes de las correcciones: el spec como contrato, la KB como autoridad del dominio, el schema de la herramienta y la semántica real del motor.
 
 ---
 
 ## D1 · El MCP `filesystem` declaraba "OPERATIVO" sin estar conectado
-**Gravedad alta** · **Dónde:** ejecución de C-01 · **Cómo se detectó:** `opencode mcp list` showed 2 servidores, no 3; el `filesystem` no aparecía, mientras `docs/skills-mcp/mcp-configuracion.md` decía *"Estado: CONFIGURADO Y OPERATIVO"*. Además `aplicacion.md` admitía lo contrario (*"El servidor MCP no se pudo ejecutar realmente"*), o sea que los dos documentos del TP se contradecían.
+**Gravedad alta** · **Dónde:** ejecución de C-01 · **Cómo se detectó:** `opencode mcp list` mostraba 2 servidores, no 3; el `filesystem` no aparecía, mientras `docs/skills-mcp/mcp-configuracion.md` decía *"Estado: CONFIGURADO Y OPERATIVO"*. Además `aplicacion.md` admitía lo contrario (*"El servidor MCP no se pudo ejecutar realmente"*), o sea que los dos documentos del TP se contradecían.
 **Fuente/regla:** la consigna del punto 6 (*"Comprueben la conexión y ejecuten al menos una herramienta real"*) y el punto 8 (*"Mostrar únicamente una lista de herramientas instaladas no acredita su uso"*).
 
 **Antes** — `opencode.jsonc` (archivo que el cliente **no lee**) con `npx`:
@@ -17,7 +17,7 @@ Ocho incidencias detectadas en la ejecución del agente (6 en C-01, 3 en C-02, c
 "filesystem": { "type": "local", "command": ["node", "...\\server-filesystem\\dist\\index.js", "C:\\...\\odontologia-tpMetodologia"] }
 ```
 **Causa raíz doble:** (a) la entry estaba en el archivo de config equivocado; (b) el shim `npx.cmd` de Windows parte el argumento cuando el path tiene espacios → `Error: None of the specified directories are accessible`.
-**Verificación:** `opencode mcp list` → 3 servidores; handshake JSON-RPC → `INIT secure-filesystem-server 2.0.0`, 14 tools, `READ CHANGES.md -> 33704 chars`. Ver `mcp-filesystem-verificacion.txt`.
+**Verificación:** `opencode mcp list` → 3 servidores; handshake JSON-RPC → `INIT secure-filesystem-server 2.0.0`, 14 tools, `READ CHANGES.md -> 34908 chars`. Ver `mcp-filesystem-verificacion.txt`.
 
 ---
 
@@ -130,7 +130,7 @@ Se agregó además el escenario 3.3 (*"Todo tenant tiene slug"*), que cierra el 
 - CREATE UNIQUE INDEX ux_tenant_slug ON tenant (slug)
 - Upstream obligatorio: seed_demo.py fija el slug del tenant demo (o se difiere a C-07 con owner)
 ```
-Se agregó la **Decisión 13** al design, un riesgo en §Riesks y las tareas 1.10, 1.11 y 1.12. Experimento en `experimento-postgres-null-en-unique.txt`.
+Se agregó la **Decisión 13** al design, un riesgo en §Riesgos y las tareas 1.10, 1.11 y 1.12. Experimento en `experimento-postgres-null-en-unique.txt`.
 
 ---
 

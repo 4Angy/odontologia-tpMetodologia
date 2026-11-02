@@ -12,7 +12,7 @@
 | 3 · MCP | Filesystem Server vs GitHub Server en 7 dimensiones y elección justificada; configuración y **herramienta real ejecutada** | `investigacion.md` §4, `mcp-configuracion.md` |
 | 4 · Ficha | `investigacion.md` (≤2 páginas) con los 7 elementos exigidos y fuentes con URL y fecha | este repo |
 | 5 · Skill propia | `visual-explore-options` creada, adaptada e instalada en 4 rutas del repo + global; registrada en `.atl/skill-registry.md`; `AGENTS.md` actualizado | `AGENTS.md`, `.atl/skill-registry.md` |
-| 6 · MCP | Servidor **conectado y operativo** (`opencode mcp list` → 3 servidores) + cliente stdio para leer el repo | `mcp-configuracion.md`, `tools/mcp-fs.js` |
+| 6 · MCP | Servidor **conectado y operativo** (`opencode mcp list` → 3 servidores) + cliente stdio para leer el repo + sonda de handshake (`INIT secure-filesystem-server 2.0.0`, 14 tools) | `mcp-configuracion.md`, `tools/mcp-fs.js`, `tools/mcp-handshake.js` |
 | 7 · Change | `C-02 tenancy-core-models` preparado (explore + proposal + design + spec de 13 escenarios + 46 tareas), **sin implementar** | `preparacion.md` |
 | 8 · Revisión | Evidencia de invocación de skill y MCP + **8 defectos** con antes/después | `revision-critica.md` |
 
@@ -43,7 +43,7 @@ Además, una **prueba de borde** sobre los límites del validador: con el defect
 
 ## 4. Limitaciones
 
-- La instancia del MCP filesystem que abre el cliente de OpenCode queda rooteada en el workspace de la sesión, no en el repo: por eso se incluye `tools/mcp-fs.js`, un cliente stdio con la raíz correcta. `engram` resuelve el proyecto por `.engram/config.json` y por `ENGRAM_PROJECT` en la config del cliente.
+- La instancia del MCP filesystem que abre el cliente de OpenCode queda rooteada en el workspace de la sesión, no en el repo: por eso se incluye `tools/mcp-fs.js`, un cliente stdio con la raíz correcta que **sólo imprime el resultado de la herramienta**. Para ver el `INIT` del server y la lista de herramientas está `tools/mcp-handshake.js`, que hace el mismo camino y sí las imprime. `engram` resuelve el proyecto por `.engram/config.json` y por `ENGRAM_PROJECT` en la config del cliente.
 - La skill se probó con 6 casos de `skill-creator`; no hay evaluación con usuarios reales de la clínica.
 - El change `C-02` está **preparado, no implementado**: su verificación (13 escenarios) queda como tareas con su comando.
 ## 5. Entrega

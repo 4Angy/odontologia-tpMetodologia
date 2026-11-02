@@ -59,11 +59,18 @@ def require_auth(request: Request) -> AuthUser:
     return AuthUser(id=user_id, tenant_id=tenant_id, roles=roles)
 
 
+def has_effective_permission(roles: tuple | list | set, *permitidos: str) -> bool:
+    """Un usuario tiene permiso si la unión de sus roles incluye alguno de los requeridos."""
+    if not permitidos:
+        return True
+    return bool(set(roles) & set(permitidos))
+
+
 def require_roles(*permitidos: str):
     """Autorización por unión: basta UN rol permitido (parte de RN-AU-04)."""
 
     def _check(user: AuthUser = Depends(require_auth)) -> AuthUser:
-        if not set(user.roles) & set(permitidos):
+        if not has_effective_permission(user.roles, *permitidos):
             raise HTTPException(
                 status_code=403,
                 detail={

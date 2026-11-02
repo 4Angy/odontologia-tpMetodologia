@@ -1,15 +1,83 @@
+==============================================================================
+EVIDENCIA: verificacion del servidor MCP filesystem
+Fecha de esta corrida : 2026-10-27
+Proyecto              : C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia
+Server bajo prueba    : @modelcontextprotocol/server-filesystem
+==============================================================================
+
+COMANDO 1 - estado de los servidores en el cliente OpenCode
+------------------------------------------------------------------------------
+$ opencode mcp list
+(exit=0)
+┌  MCP Servers
+│
+●  ✓ context7 connected
+│      https://mcp.context7.com/mcp
+│
+●  ✓ engram connected
+│      engram mcp
+│
+●  ✓ filesystem connected
+│      node C:\Users\Cara Palida\AppData\Roaming\npm\node_modules\@modelcontextprotocol\server-filesystem\dist\index.js C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia
+│
+└  3 server(s)
+
+COMANDO 2 - handshake JSON-RPC por stdio (initialize -> tools/list -> tools/call)
+------------------------------------------------------------------------------
+$ node docs\skills-mcp\tools\mcp-handshake.js "C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia"
+(exit=0)
+INIT secure-filesystem-server 2.0.0
+14 tools: read_file, read_text_file, read_media_file, read_multiple_files, write_file, edit_file, create_directory, list_directory, list_directory_with_sizes, directory_tree, move_file, search_files, get_file_info, list_allowed_directories
+READ CHANGES.md -> 34908 chars
+primera linea: # CHANGES — Secuencia de Implementación
+
+COMANDO 3 - el cliente del repositorio (mcp-fs.js), solo tools/call
+------------------------------------------------------------------------------
+$ node docs\skills-mcp\tools\mcp-fs.js "C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia" read_text_file -   (JSON por stdin: {"path":"<raiz>/CHANGES.md"})
+(exit=0)
+resumen de la salida (el payload es el texto completo de CHANGES.md):
+stdout = 34909 chars / 395 lineas
+primera linea: # CHANGES — Secuencia de Implementación
+ultima linea : 
+
+NOTAS DE VERIFICACION (auditoria de las lineas citadas en la documentacion)
+------------------------------------------------------------------------------
+1. 'INIT secure-filesystem-server 2.0.0'  -> REPRODUCIDA hoy (COMANDO 2).
+2. '14 tools'                            -> REPRODUCIDA hoy (COMANDO 2).
+3. 'READ CHANGES.md -> 33704 chars'       -> NO se reproduce hoy.
+   Valor real de hoy: 34908 chars.
+   33704 es el tamano real de CHANGES.md en el commit 4ec1cc5 (c-01),
+   390 lineas con fin de linea CRLF = 33704 chars. Despues c78cdff (c-02)
+   lo llevo a 34908 chars con CRLF, que es lo que devuelve el server ahora.
+4. docs/skills-mcp/tools/mcp-fs.js NO imprime INIT ni el listado de tools:
+   descarta esas respuestas y solo imprime el payload de tools/call.
+   Por eso esas lineas salen del COMANDO 2, no del cliente del repo.
+5. En la ejecucion de mas abajo (anterior), la linea
+   'read_text_file(CHANGES.md) -> 395 caracteres' se corrigio a
+   '-> 395 lineas': 395 es la cantidad de LINEAS del archivo, no de
+   caracteres. La corrida se conserva completa; ver la NOTA al pie.
+
+==============================================================================
+EJECUCION ANTERIOR (conservada tal cual fue registrada)
+==============================================================================
+
 ﻿=== opencode mcp list ===
-[34mÔùÅ[39m  Ô£ô context7 [90mconnected
-[90mÔöé[39m      [90mhttps://mcp.context7.com/mcp
-[34mÔùÅ[39m  Ô£ô engram [90mconnected
-[90mÔöé[39m      [90mengram mcp
-[34mÔùÅ[39m  Ô£ô filesystem [90mconnected
-[90mÔöé[39m      [90mnode C:\Users\Cara Palida\AppData\Roaming\npm\node_modules\@modelcontextprotocol\server-filesystem\dist\index.js C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia
-[90mÔöö[39m  3 server(s)
+ÔùÅ  Ô£ô context7 connected
+Ôöé      https://mcp.context7.com/mcp
+ÔùÅ  Ô£ô engram connected
+Ôöé      engram mcp
+ÔùÅ  Ô£ô filesystem connected
+Ôöé      node C:\Users\Cara Palida\AppData\Roaming\npm\node_modules\@modelcontextprotocol\server-filesystem\dist\index.js C:\Users\Cara Palida\Documents\projects\odontologia-tpMetodologia
+Ôöö  3 server(s)
 
 === handshake MCP (initialize -> tools/list -> tools/call read_text_file) ===
-read_text_file(CHANGES.md) -> 395 caracteres devueltos por el server MCP
+read_text_file(CHANGES.md) -> 395 lineas devueltos por el server MCP
 primera linea: # CHANGES ÔÇö Secuencia de Implementaci├│n
+   NOTA (2026-10-27): la linea 'read_text_file(CHANGES.md) -> 395 ...'
+   decia originalmente "395 caracteres". No es asi: 395 es la cantidad de
+   LINEAS que devolvio la lectura de CHANGES.md. El contenido mide 34908
+   chars (34909 contando el \n final que agrega console.log). Se corrigio
+   esa palabra sin borrar el resto de esta corrida, que se conserva tal cual.
 
 === list_directory(knowledge-base) via MCP ===
 [FILE] 01_vision_y_objetivos.md

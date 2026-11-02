@@ -56,11 +56,15 @@ El TP pedía tres cosas: **una skill propia**, **un servidor MCP** y **la prepar
 
 **Por qué era necesario:** el agente tenía que consultar `knowledge-base/`, `CHANGES.md` y `openspec/` repetidamente, y con herramientas nativas del cliente salía del chat con permisos amplios; el MCP permite **una sola vía, acotada y sin credenciales**, que es justo lo que pedía la consigna.
 
-**Cómo se usa:** con el cliente de OpenCode (`mcp.filesystem.*`) o, para apuntar a la raíz del repo, con el cliente stdio incluido (`docs/skills-mcp/tools/mcp-fs.js`).
+**Cómo se usa:** con el cliente de OpenCode (`mcp.filesystem.*`) o, para apuntar a la raíz del repo, con el cliente stdio incluido (`docs/skills-mcp/tools/mcp-fs.js`), que **sólo imprime el resultado de la herramienta invocada** (descarta las respuestas de `initialize` y de `tools/list`). El `INIT` del server y la lista de las 14 herramientas los imprime `docs/skills-mcp/tools/mcp-handshake.js`:
+
+```bash
+node docs/skills-mcp/tools/mcp-handshake.js "<raiz>"   # INIT + las 14 tools
+```
 
 **Límites:** sólo lectura sobre el proyecto; sin escritura en archivos sensibles; sin datos reales de pacientes; sin credenciales en el repositorio.
 
-**Evidencia de uso:** `opencode mcp list` → 3 servidores conectados; handshake JSON-RPC → `INIT secure-filesystem-server 2.0.0`, 14 tools, `READ CHANGES.md -> 33704 chars`; lectura de §03 y §04 de la KB para construir el spec de C-02.
+**Evidencia de uso:** `opencode mcp list` → 3 servidores conectados; handshake JSON-RPC → `INIT secure-filesystem-server 2.0.0`, 14 tools, `READ CHANGES.md -> 34908 chars`; lectura de §03 y §04 de la KB para construir el spec de C-02.
 
 ---
 
@@ -128,7 +132,14 @@ cp .opencode/skills/visual-explore-options/SKILL.md ~/.config/opencode/skills/vi
 # 3. MCP
 npm install -g @modelcontextprotocol/server-filesystem
 # entry en ~/.config/opencode/opencode.json -> ver mcp-configuracion.md
+
+# Comprobar la conexión:
 opencode mcp list
+
+# Ver INIT y la lista de herramientas del server (lo que mcp-fs.js no imprime):
+node docs/skills-mcp/tools/mcp-handshake.js "<raiz>"
+
+# Ejecutar una herramienta real (mcp-fs.js imprime sólo su resultado):
 node docs/skills-mcp/tools/mcp-fs.js "<raiz>" read_text_file
 
 # 4. Memoria del proyecto

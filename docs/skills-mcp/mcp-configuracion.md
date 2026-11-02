@@ -49,7 +49,7 @@ opencode mcp list
 ```
 
 Desde el cliente, las herramientas quedan disponibles como `mcp.filesystem.*`:
-`list_directory`, `read_file`, `read_text_file`, `read_multiple_files`, `write_file`, `edit_file`, `create_directory`, `directory_tree`, `move_file`, `search_files`, `get_file_info`, `list_allowed_directories`.
+`list_directory`, `read_file`, `read_text_file`, `read_media_file`, `read_multiple_files`, `write_file`, `edit_file`, `create_directory`, `list_directory_with_sizes`, `directory_tree`, `move_file`, `search_files`, `get_file_info`, `list_allowed_directories` (14 en total).
 
 ### 4. Raíz del proyecto: cliente MCP reutilizable
 
@@ -60,7 +60,23 @@ node docs/skills-mcp/tools/mcp-fs.js "<raiz_del_repo>" list_directory  # argumen
 node docs/skills-mcp/tools/mcp-fs.js "<raiz_del_repo>" read_text_file '{"path":"<raiz>\\CHANGES.md"}'
 ```
 
-Habla JSON-RPC 2.0 por stdio contra el mismo server oficial (`initialize` → `tools/list` → `tools/call`) y evita el shim de Windows.
+Habla JSON-RPC 2.0 por stdio contra el mismo server oficial (`initialize` → `tools/list` → `tools/call`) y evita el shim de Windows. **Sólo imprime el resultado de la herramienta** (`tools/call`): las respuestas de `initialize` y de `tools/list` las descarta.
+
+Para ver esas dos respuestas —nombre y versión del server y listado de herramientas— está la sonda `mcp-handshake.js`, que hace el mismo camino por stdio y sí las imprime:
+
+```bash
+node docs/skills-mcp/tools/mcp-handshake.js "<raiz_del_repo>"
+```
+
+Salida del 2026-10-27:
+
+```
+INIT secure-filesystem-server 2.0.0
+14 tools: read_file, read_text_file, read_media_file, read_multiple_files, write_file, edit_file, create_directory, list_directory, list_directory_with_sizes, directory_tree, move_file, search_files, get_file_info, list_allowed_directories
+READ CHANGES.md -> 34908 chars
+```
+
+Las dos salidas (esta y la de `mcp-fs.js`) quedaron registradas en `evidencias/mcp-filesystem-verificacion.txt`.
 
 ## Servidor seleccionado
 

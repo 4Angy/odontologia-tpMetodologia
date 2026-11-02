@@ -97,7 +97,7 @@ Las primeras llamadas al MCP devolvieron `unknown_project`: el nombre del proyec
 | `.engram/config.json` con `{"project_name": "odontologia-tpmetodologia"}` | **en el repo** | `mem_current_project()` resuelve el proyecto desde el repo: `{"project":"odontologia-tpmetodologia","project_source":"config"}`. El repo queda atado a su propia memoria y `engram sync` versiona las observaciones correctas. |
 | `environment: { ENGRAM_PROJECT: "odontologia-tpmetodologia" }` en el server `engram` de `~/.config/opencode/opencode.json` | global | El proceso del MCP arranca con el proyecto por defecto, sin depender del cwd. La clave `environment` está en el schema de opencode (`McpLocalConfig`). |
 
-Con las dos piezas, `mem_save` acepta `project:"odontologia-tpmetodologia"` ("backed by repo config") y las 13 observaciones del proyecto quedan bajo ese nombre, con sus relaciones y sus pines.
+Con las dos piezas, `mem_save` acepta `project:"odontologia-tpmetodologia"` ("backed by repo config") y las observaciones del proyecto quedan bajo ese nombre, con sus relaciones y sus pines.
 
 **Qué aportó al change (honestamente):** el MCP `engram` **no aportó contenido al entregable** — ni una línea del código, de los specs ni de los ADR salió de ahí. Su aportación fue de **trazabilidad y continuidad**: (a) dejó las decisiones y los gotchas fuera del repo, en memoria consultable por sesiones futuras, incluyendo tres trampas que **no** se deducen del código (que `pydantic-settings` lee `os.environ` incluso en `model_validate`; que `pytest.ini` con `addopts=-q` + un `-q` extra produce `-qq` y oculta el resumen en pytest 9; que `model_validate` no coacciona `str` → `ZoneInfo`); (b) obligó a un segundo pase de revisión semántica (`mem_judge`) sobre cada decisión, que fue el que destapó el conflicto de nomenclatura con una memoria previa del mismo proyecto. Es aportación al *proceso*, no al *producto*.
 
@@ -139,8 +139,10 @@ TOOLS: read_file, read_text_file, read_media_file, read_multiple_files, write_fi
        edit_file, create_directory, list_directory, list_directory_with_sizes,
        directory_tree, move_file, search_files, get_file_info, list_allowed_directories
 CALL   read_text_file("CHANGES.md")
-→ 33704 chars; empieza con: "# CHANGES — Secuencia de Implementación\r\n\r\n> Índice canónico"
+→ 34908 chars; empieza con: "# CHANGES — Secuencia de Implementación\r\n\r\n> Índice canónico"
 ```
+
+> **Nota sobre la cifra:** 33704 chars corresponde a CHANGES.md en el commit 4ec1cc5 (CRLF); el archivo creció al agregar los artefactos de C-02. Valor reproducido el 2026-10-27 con tools/mcp-handshake.js: 34908 chars (34514 con LF).
 
 **Qué aporta al change:** con `filesystem` operativo y rooted en el proyecto, un agente puede consultar `CHANGES.md`, `knowledge-base/`, `openspec/specs/` y los changes **sin salir del chat** y **sin permisos de escritura sobre datos sensibles** — que es exactamente el objetivo declarado en `docs/skills-mcp/investigacion.md` §4 y en `AGENTS.md` §Integración MCP. Antes de la corrección, ese objetivo era una aspiración documental sin servidor detrás.
 

@@ -1,5 +1,5 @@
 ﻿Experimento: un indice UNIQUE admite multiples valores NULL en PostgreSQL 16.
-Es la base del defecto D2 de la revision critica de C-02: con slug nullable, la
+Es la base del defecto D7 de la revision critica de C-02: con slug nullable, la
 unicidad global del slug NO queda garantizada.
 
 --- SQL ejecutado ---

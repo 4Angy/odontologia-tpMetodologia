@@ -1,15 +1,16 @@
-﻿=== engram: proyectos (el proyecto del repo y el otro) ===
+Fecha de la corrida: 2026-10-27 (al momento de esta captura el proyecto tenía 12 obs; engram projects list hoy muestra 27, porque se siguieron guardando observaciones)
+=== engram: proyectos (el proyecto del repo y el otro) ===
 odontologia-tpmetodologia        12 obs     1 session      0 prompts
 plataforma-educativa-freecodecamp   12 obs     3 sessions     0 prompts
 
 === engram: observaciones del proyecto ===
-[1] #33 (decision) ÔÇö C-01 foundation: ADR-001/002/003 + esquema y base de datos
-[2] #34 (decision) ÔÇö C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs
-[3] #35 (bugfix) ÔÇö Verify C-01: 3 huecos del spec encontrados y corregidos
-[4] #36 (decision) ÔÇö C-02 preparado (sin implementar): artefactos SDD del punto 7 del TP
-[5] #38 (pattern) ÔÇö Regla: openspec validate no alcanza para revisar specs (receta de 3 cruces)
+[1] #33 (decision) — C-01 foundation: ADR-001/002/003 + esquema y base de datos
+[2] #34 (decision) — C-01 apply: base runtime (settings/logging/errors/health) + Postgres real + compose + ADRs
+[3] #35 (bugfix) — Verify C-01: 3 huecos del spec encontrados y corregidos
+[4] #36 (decision) — C-02 preparado (sin implementar): artefactos SDD del punto 7 del TP
+[5] #38 (pattern) — Regla: openspec validate no alcanza para revisar specs (receta de 3 cruces)
 
-=== engram:的项目 config del repo ===
+=== engram: config del repo ===
 {
   "project_name": "odontologia-tpmetodologia"
 }

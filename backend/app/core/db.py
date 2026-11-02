@@ -21,6 +21,7 @@ def import_models() -> None:
     Se llama desde Alembic (`target_metadata`) y desde los fixtures de test.
     Los módulos sin `models.py` se ignoran.
     """
+    import app.core.tenancy.models  # noqa: F401
     import app.modules as modules_package
 
     for info in pkgutil.iter_modules(modules_package.__path__):

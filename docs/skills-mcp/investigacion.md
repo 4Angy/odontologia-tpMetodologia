@@ -40,10 +40,13 @@ npm install -g @modelcontextprotocol/server-filesystem
 # ~/.config/opencode/opencode.json (el cliente lee este archivo, NO el .jsonc):
 "filesystem": { "type": "local", "command": ["node", "<ruta>/server-filesystem/dist/index.js", "<raiz>"] }
 opencode mcp list                                    # comprobar: filesystem connected
+node docs/skills-mcp/tools/mcp-handshake.js "<raiz>"  # INIT + lista de tools (14)
 node docs/skills-mcp/tools/mcp-fs.js "<raiz>" read_text_file   # herramienta real
 ```
 
 > Problema resuelto y documentado en `mcp-configuracion.md`: con `npx` falla en Windows si el path tiene espacios.
+
+> **Qué muestra cada comando:** `mcp-handshake.js` imprime `INIT secure-filesystem-server 2.0.0` y la lista de las 14 herramientas del server; `mcp-fs.js` sólo imprime el **resultado** de la herramienta invocada, porque descarta las respuestas de `initialize` y de `tools/list`. Salidas del 2026-10-27 en `evidencias/mcp-filesystem-verificacion.txt`.
 
 ## 6. Archivos de la fundación a actualizar
 

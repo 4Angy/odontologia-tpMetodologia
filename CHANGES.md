@@ -141,7 +141,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > C-04 y C-06 corren en paralelo tras C-03. C-04 alimenta a C-05, C-07, C-09 y C-11 (paciente + opt-in son prerrequisito de turnos, notificaciones y cobros).
 
 ### [C-02] `tenancy-core-models`
-- **Estado**: `[ ]` pendiente de implementación — artefactos SDD listos en `openspec/changes/C-02-tenancy-core-models/` (explore + proposal + design + specs + tasks). **No implementado, no verificado, no archivado.**
+- **Estado**: `[x]` implementado y verificado — artefactos SDD y cambios del runtime cerrados en `openspec/changes/C-02-tenancy-core-models/`.
 - **Scope**: Modelos base multi-tenant + migraciones iniciales + seed mínimo
   - Modelos: `Tenant` (slug kebab-case único global, tz default `America/Argentina/Buenos_Aires`), `Usuario` (email único por tenant, `roles` array enum, `activo`), `Config` (antelacion_hs default 24, seña, plantillas)
   - `TenantMixin` con `tenant_id NOT NULL + FK`; unicidades y búsquedas siempre compuestas con `tenant_id` (RN-AU-01)

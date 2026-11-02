@@ -26,11 +26,11 @@ Los artefactos que produjo:
 
 ## 3. Qué aportó al change
 
-1. **Forzó la comparación explícita antes de fijar el esquema.** En C-02, el eje decisivo fue *repositorio tenant-scoped* frente a *`tenant_id` explícito en cada llamada*: la skill obliged a poner la alternativa sobre la mesa, y de ahí salió que R1 (la regla dura #1) pasara de depender de la disciplina a depender de la estructura.
+1. **Forzó la comparación explícita antes de fijar el esquema.** En C-02, el eje decisivo fue *repositorio tenant-scoped* frente a *`tenant_id` explícito en cada llamada*: la skill obligó a poner la alternativa sobre la mesa, y de ahí salió que R1 (la regla dura #1) pasara de depender de la disciplina a depender de la estructura.
 2. **Detectó la colisión de migraciones** entre `0001_cancelacion_turno` (ya existente) y la `002` que el plan asignaba a C-02, y dejó por escrito que `0001` no se toca.
 3. **Puso en pausa la escritura de código** justo donde hacía falta, en las dos preparaciones.
 4. **Dejó el porqué de cada alternativa descartada**, que es lo que permite cuestionarla después. Ejemplo: la tabla puente de roles quedó descartada **porque contradice la KB §04**, y por eso el `design.md` cita la KB en lugar de una preferencia.
-5. **En el punto 8 fue el insumo de la evidencia**: la comparación de alternativas es la que permitió distinguir un error de diseño (D1: el spec de C-02 contradecía el contrato de error de `foundation/runtime`) de una decisión discutible.
+5. **En el punto 8 fue el insumo de la evidencia**: la comparación de alternativas es la que permitió distinguir un error de diseño (D6: el spec de C-02 contradecía el contrato de error de `foundation/runtime`) de una decisión discutible.
 
 ## 4. Comprobación en sesión nueva
 

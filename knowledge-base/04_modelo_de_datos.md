@@ -36,6 +36,7 @@ Toda tabla de negocio lleva `tenant_id` NOT NULL + FK a `tenant`. Unicidades y b
 - Relaciones: 1───* con todo lo de negocio
 - Constraints: `slug` kebab-case único global
 - Índices: `slug`
+- Nota de implementación v1: la PK real del tenant en el esquema desplegado sigue siendo `String(64)` para compatibilidad con `turno.tenant_id` generado en `0001`; la deuda se reevalúa en C-06/C-07.
 
 ### usuario
 - Atributos: `id`, `tenant_id` FK, `nombre`, `email` (unique por tenant), `password_hash`, `roles` (array enum: recepcion/odontologo/dueno), `activo` (bool), `created_at`
@@ -77,6 +78,8 @@ Toda tabla de negocio lleva `tenant_id` NOT NULL + FK a `tenant`. Unicidades y b
 - notificacion_envio: `id`, `tenant_id`, `paciente_id`, `turno_id` (nullable), `canal` (whatsapp/email), `plantilla`, `estado` (`encolada|enviada|entregada|fallida`), `costo_estimado` (nullable), `provider_msg_id`, `created_at`
 - optin: `id`, `tenant_id`, `paciente_id`, `canal`, `estado` (bool), `updated_at`
 - Índices: `(tenant_id, created_at)`, `(tenant_id, estado)` para reintentos
+
+> Nota de configuración v1: la columna real de `config` que se usa en el runtime es `antelacion_cancel_hs`; el nombre `antelacion_hs` del dominio se mantiene como término conceptual, pero el schema ejecutable usa el nombre exacto que ya existe en `0001`.
 
 ## Seed data inicial
 
