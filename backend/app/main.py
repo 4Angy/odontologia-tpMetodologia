@@ -26,6 +26,8 @@ from app.core.errors import (
 from app.core.logging import configure_logging, log_event
 from app.modules.agenda.router import router as agenda_router
 from app.modules.auth.router import router as auth_router
+from app.modules.pacientes.router import export_router as pacientes_export_router
+from app.modules.pacientes.router import router as pacientes_router
 from app.modules.tenancy.router import router as tenancy_router
 
 logger = logging.getLogger("odontologia.api")
@@ -199,6 +201,8 @@ def create_app(
 
     app.include_router(agenda_router)
     app.include_router(auth_router)
+    app.include_router(pacientes_router)
+    app.include_router(pacientes_export_router)
     app.include_router(tenancy_router)
     return app
 

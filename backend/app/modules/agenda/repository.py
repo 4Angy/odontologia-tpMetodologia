@@ -13,8 +13,101 @@ from sqlalchemy import and_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.modules.agenda.models import ConfigModel, TurnoModel
+from app.modules.agenda.models import (
+    BloqueoModel,
+    ConfigModel,
+    PrestacionModel,
+    ProfesionalModel,
+    TurnoModel,
+)
 from app.modules.agenda.service import ESTADOS_CANCELABLES
+
+
+class ProfesionalRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def list(self, tenant_id: str) -> list[ProfesionalModel]:
+        stmt = select(ProfesionalModel).where(ProfesionalModel.tenant_id == tenant_id).order_by(ProfesionalModel.nombre)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def get_by_id(self, tenant_id: str, profesional_id: str) -> Optional[ProfesionalModel]:
+        stmt = select(ProfesionalModel).where(
+            ProfesionalModel.tenant_id == tenant_id,
+            ProfesionalModel.id == profesional_id,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def create(self, profesional: ProfesionalModel) -> ProfesionalModel:
+        self.session.add(profesional)
+        self.session.flush()
+        return profesional
+
+    def update(self, profesional: ProfesionalModel) -> ProfesionalModel:
+        self.session.flush()
+        return profesional
+
+    def delete(self, profesional: ProfesionalModel) -> None:
+        self.session.delete(profesional)
+        self.session.flush()
+
+
+class PrestacionRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def list(self, tenant_id: str) -> list[PrestacionModel]:
+        stmt = select(PrestacionModel).where(PrestacionModel.tenant_id == tenant_id).order_by(PrestacionModel.nombre)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def get_by_id(self, tenant_id: str, prestacion_id: str) -> Optional[PrestacionModel]:
+        stmt = select(PrestacionModel).where(
+            PrestacionModel.tenant_id == tenant_id,
+            PrestacionModel.id == prestacion_id,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def create(self, prestacion: PrestacionModel) -> PrestacionModel:
+        self.session.add(prestacion)
+        self.session.flush()
+        return prestacion
+
+    def update(self, prestacion: PrestacionModel) -> PrestacionModel:
+        self.session.flush()
+        return prestacion
+
+    def delete(self, prestacion: PrestacionModel) -> None:
+        self.session.delete(prestacion)
+        self.session.flush()
+
+
+class BloqueoRepository:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def list(self, tenant_id: str) -> list[BloqueoModel]:
+        stmt = select(BloqueoModel).where(BloqueoModel.tenant_id == tenant_id).order_by(BloqueoModel.inicio)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def get_by_id(self, tenant_id: str, bloqueo_id: str) -> Optional[BloqueoModel]:
+        stmt = select(BloqueoModel).where(
+            BloqueoModel.tenant_id == tenant_id,
+            BloqueoModel.id == bloqueo_id,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def create(self, bloqueo: BloqueoModel) -> BloqueoModel:
+        self.session.add(bloqueo)
+        self.session.flush()
+        return bloqueo
+
+    def update(self, bloqueo: BloqueoModel) -> BloqueoModel:
+        self.session.flush()
+        return bloqueo
+
+    def delete(self, bloqueo: BloqueoModel) -> None:
+        self.session.delete(bloqueo)
+        self.session.flush()
 
 
 class TurnoRepository:
@@ -60,22 +153,47 @@ class ConfigRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def get(self, tenant_id: str) -> Optional[ConfigModel]:
+        return self.session.get(ConfigModel, tenant_id)
+
     def get_hs(self, tenant_id: str) -> Optional[int]:
-        cfg = self.session.get(ConfigModel, tenant_id)
+        cfg = self.get(tenant_id)
         return cfg.antelacion_cancel_hs if cfg is not None else None
 
-    def upsert(self, tenant_id: str, antelacion_cancel_hs: int) -> ConfigModel:
+    def upsert(
+        self,
+        tenant_id: str,
+        antelacion_cancel_hs: int,
+        antelacion_reserva_hs: int = 2,
+        recordatorio_t_48h: bool | None = None,
+        recordatorio_t_24h: bool | None = None,
+    ) -> ConfigModel:
         if antelacion_cancel_hs < 0:
             raise IntegrityError(
                 "antelacion_cancel_hs >= 0", params=None, orig=ValueError("negativo")
             )
-        cfg = self.session.get(ConfigModel, tenant_id)
+        if antelacion_reserva_hs < 0:
+            raise IntegrityError(
+                "antelacion_reserva_hs >= 0", params=None, orig=ValueError("negativo")
+            )
+        cfg = self.get(tenant_id)
         if cfg is None:
             cfg = ConfigModel(
-                tenant_id=tenant_id, antelacion_cancel_hs=antelacion_cancel_hs
+                tenant_id=tenant_id,
+                antelacion_cancel_hs=antelacion_cancel_hs,
+                antelacion_reserva_hs=antelacion_reserva_hs,
             )
+            if recordatorio_t_48h is not None:
+                cfg.recordatorio_t_48h = recordatorio_t_48h
+            if recordatorio_t_24h is not None:
+                cfg.recordatorio_t_24h = recordatorio_t_24h
             self.session.add(cfg)
         else:
             cfg.antelacion_cancel_hs = antelacion_cancel_hs
+            cfg.antelacion_reserva_hs = antelacion_reserva_hs
+            if recordatorio_t_48h is not None:
+                cfg.recordatorio_t_48h = recordatorio_t_48h
+            if recordatorio_t_24h is not None:
+                cfg.recordatorio_t_24h = recordatorio_t_24h
         self.session.flush()
         return cfg

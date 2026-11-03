@@ -179,6 +179,36 @@ class UsuarioModel(TenantMixin, AuditMixin, Base):
     )
 
 
+class ProfesionalModel(TenantMixin, AuditMixin, Base):
+    __tablename__ = "profesional"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    usuario_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    nombre: Mapped[str] = mapped_column(String(200), nullable=False)
+    color_agenda: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    activo: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True, server_default="true")
+
+
+class PrestacionModel(TenantMixin, AuditMixin, Base):
+    __tablename__ = "prestacion"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    nombre: Mapped[str] = mapped_column(String(120), nullable=False)
+    duracion_min: Mapped[int] = mapped_column(Integer(), nullable=False, default=30)
+    precio_ref: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+    activa: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True, server_default="true")
+
+
+class BloqueoModel(TenantMixin, AuditMixin, Base):
+    __tablename__ = "bloqueo"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    profesional_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    inicio: Mapped[datetime] = mapped_column(AwareDateTime(), nullable=False)
+    fin: Mapped[datetime] = mapped_column(AwareDateTime(), nullable=False)
+    motivo: Mapped[str | None] = mapped_column(Text(), nullable=True)
+
+
 class TurnoModel(Base):
     __tablename__ = "turno"
 
@@ -210,12 +240,22 @@ class ConfigModel(Base):
     antelacion_cancel_hs: Mapped[int] = mapped_column(
         Integer(), nullable=False, default=24, server_default="24"
     )
+    antelacion_reserva_hs: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=2, server_default="2"
+    )
     senia_requerida: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=False, server_default="false"
+    )
+    recordatorio_t_48h: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=True, server_default="true"
+    )
+    recordatorio_t_24h: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=True, server_default="true"
     )
 
     __table_args__ = (
         CheckConstraint("antelacion_cancel_hs >= 0", name="ck_config_antelacion_ge_0"),
+        CheckConstraint("antelacion_reserva_hs >= 0", name="ck_config_reserva_antelacion_ge_0"),
     )
 
 
@@ -223,8 +263,11 @@ __all__ = [
     "AuditMixin",
     "AwareDateTime",
     "Base",
+    "BloqueoModel",
     "ConfigModel",
     "EnumArrayType",
+    "PrestacionModel",
+    "ProfesionalModel",
     "TenantMixin",
     "TenantModel",
     "TurnoModel",
