@@ -25,11 +25,12 @@ export function AppRutas(): JSX.Element {
         </Route>
         <Route element={<RequirePermission permiso="pacientes" />}>
           <Route path="/pacientes" element={<PacientesPage />} />
+          <Route path="/pacientes/:pacienteId" element={<PacientesPage />} />
         </Route>
         <Route element={<RequirePermission permiso="cobros" />}>
           <Route path="/caja" element={<CajaPage />} />
         </Route>
-        <Route element={<RequirePermission permiso="configuracion" />}>
+        <Route element={<RequirePermission permiso="catalogo" />}>
           <Route path="/config" element={<ConfigPage />} />
         </Route>
       </Route>

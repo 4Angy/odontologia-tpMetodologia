@@ -114,10 +114,36 @@ class TurnoRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def lock_profesional(
+        self,
+        tenant_id: str,
+        profesional_id: str,
+        *,
+        require_active: bool = True,
+    ) -> Optional[ProfesionalModel]:
+        """Serializa escrituras de agenda por profesional dentro de su tenant."""
+        stmt = select(ProfesionalModel).where(
+            ProfesionalModel.tenant_id == tenant_id,
+            ProfesionalModel.id == profesional_id,
+        )
+        if require_active:
+            stmt = stmt.where(ProfesionalModel.activo.is_(True))
+        stmt = stmt.with_for_update()
+        return self.session.execute(stmt).scalar_one_or_none()
+
     def get_by_id(self, tenant_id: str, turno_id: str) -> Optional[TurnoModel]:
         """R1: filtra por tenant; cross-tenant → None (404 indistinguible)."""
         stmt = select(TurnoModel).where(
             and_(TurnoModel.id == turno_id, TurnoModel.tenant_id == tenant_id)
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def get_by_idempotency_key(
+        self, tenant_id: str, idempotency_key: str
+    ) -> Optional[TurnoModel]:
+        stmt = select(TurnoModel).where(
+            TurnoModel.tenant_id == tenant_id,
+            TurnoModel.idempotency_key == idempotency_key,
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
@@ -129,6 +155,55 @@ class TurnoRepository:
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
+    def list_for_agenda(
+        self,
+        *,
+        tenant_id: str,
+        desde: datetime,
+        hasta: datetime,
+        profesional_id: str | None = None,
+        profesional_usuario_id: str | None = None,
+    ) -> list[TurnoModel]:
+        stmt = select(TurnoModel).where(
+            TurnoModel.tenant_id == tenant_id,
+            TurnoModel.inicio < hasta,
+            TurnoModel.fin > desde,
+        )
+        if profesional_id is not None:
+            stmt = stmt.where(TurnoModel.profesional_id == profesional_id)
+        if profesional_usuario_id is not None:
+            stmt = stmt.where(
+                TurnoModel.profesional_usuario_id == profesional_usuario_id
+            )
+        stmt = stmt.order_by(TurnoModel.inicio, TurnoModel.id)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_solapados(
+        self,
+        *,
+        tenant_id: str,
+        profesional_id: str,
+        inicio: datetime,
+        fin: datetime,
+        excluir_turno_id: str | None = None,
+    ) -> list[TurnoModel]:
+        stmt = select(TurnoModel).where(
+            TurnoModel.tenant_id == tenant_id,
+            TurnoModel.profesional_id == profesional_id,
+            TurnoModel.estado.in_(ESTADOS_CANCELABLES),
+            TurnoModel.inicio < fin,
+            TurnoModel.fin > inicio,
+        )
+        if excluir_turno_id is not None:
+            stmt = stmt.where(TurnoModel.id != excluir_turno_id)
+        stmt = stmt.order_by(TurnoModel.inicio, TurnoModel.id)
+        return list(self.session.execute(stmt).scalars().all())
+
+    def create(self, turno: TurnoModel) -> TurnoModel:
+        self.session.add(turno)
+        self.session.flush()
+        return turno
+
     def list_activos(
         self, tenant_id: str, profesional_id: str, desde: datetime, hasta: datetime
     ) -> list[TurnoModel]:
@@ -139,8 +214,8 @@ class TurnoRepository:
                 and_(
                     TurnoModel.tenant_id == tenant_id,
                     TurnoModel.profesional_id == profesional_id,
-                    TurnoModel.inicio >= desde,
                     TurnoModel.inicio < hasta,
+                    TurnoModel.fin > desde,
                     TurnoModel.estado.in_(ESTADOS_CANCELABLES),
                 )
             )

@@ -13,7 +13,10 @@ class PacienteRepository:
         self.session = session
 
     def list(self, tenant_id: str, q: Optional[str] = None) -> list[PacienteModel]:
-        stmt = select(PacienteModel).where(PacienteModel.tenant_id == tenant_id)
+        stmt = select(PacienteModel).where(
+            PacienteModel.tenant_id == tenant_id,
+            PacienteModel.deleted_at.is_(None),
+        )
         if q:
             like = f"%{q.strip()}%"
             stmt = stmt.where(
@@ -31,8 +34,25 @@ class PacienteRepository:
         stmt = select(PacienteModel).where(
             PacienteModel.tenant_id == tenant_id,
             PacienteModel.id == paciente_id,
+            PacienteModel.deleted_at.is_(None),
         )
         return self.session.execute(stmt).scalar_one_or_none()
+
+    def exists_with_contact(
+        self, tenant_id: str, *, dni: str | None, telefono: str | None
+    ) -> bool:
+        identifiers = []
+        if dni:
+            identifiers.append(PacienteModel.dni == dni)
+        if telefono:
+            identifiers.append(PacienteModel.telefono == telefono)
+        if not identifiers:
+            return False
+        statement = select(PacienteModel.id).where(
+            PacienteModel.tenant_id == tenant_id,
+            or_(*identifiers),
+        )
+        return self.session.execute(statement).first() is not None
 
     def create(self, paciente: PacienteModel) -> PacienteModel:
         self.session.add(paciente)

@@ -9,7 +9,15 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel, UsuarioModel, UsuarioRoles
+from app.modules.agenda.models import (
+    ConfigModel,
+    PrestacionModel,
+    ProfesionalModel,
+    TenantModel,
+    TurnoModel,
+    UsuarioModel,
+    UsuarioRoles,
+)
 
 TENANT_DEMO = "tenant-demo"
 TENANT_DEMO_SLUG = "demo"
@@ -29,7 +37,14 @@ def seed_demo(session: Session, now_utc: datetime | None = None) -> dict:
 
     cfg = session.get(ConfigModel, TENANT_DEMO)
     if cfg is None:
-        session.add(ConfigModel(tenant_id=TENANT_DEMO, antelacion_cancel_hs=24, senia_requerida=False))
+        session.add(
+            ConfigModel(
+                tenant_id=TENANT_DEMO,
+                antelacion_cancel_hs=24,
+                antelacion_reserva_hs=2,
+                senia_requerida=False,
+            )
+        )
 
     demo_users = [
         ("usuario-demo-recepcion", "recepcion@demo.com", [UsuarioRoles.RECEPCION.value]),
@@ -48,6 +63,50 @@ def seed_demo(session: Session, now_utc: datetime | None = None) -> dict:
                     email=email,
                     activo=True,
                     roles=roles,
+                )
+            )
+
+    profesional_demo = session.get(ProfesionalModel, "prof-demo-1")
+    if profesional_demo is None:
+        session.add(
+            ProfesionalModel(
+                id="prof-demo-1",
+                tenant_id=TENANT_DEMO,
+                nombre="Profesional Demo",
+                usuario_id=None,
+                activo=True,
+            )
+        )
+    elif profesional_demo.tenant_id != TENANT_DEMO:
+        raise ValueError("El ID reservado para el profesional demo pertenece a otro tenant.")
+
+    for prestacion_id, nombre, duracion_min in (
+        ("prest-demo-limpieza", "limpieza", 30),
+        ("prest-demo-consulta", "consulta", 20),
+        ("prest-demo-arreglo", "arreglo", 45),
+        ("prest-demo-conducto", "conducto", 60),
+    ):
+        existente = (
+            session.query(PrestacionModel)
+            .filter_by(tenant_id=TENANT_DEMO, nombre=nombre)
+            .first()
+        )
+        if existente is not None:
+            continue
+        prestacion_por_id = session.get(PrestacionModel, prestacion_id)
+        if prestacion_por_id is not None and prestacion_por_id.tenant_id != TENANT_DEMO:
+            raise ValueError(
+                f"El ID reservado para la prestación demo {nombre} pertenece a otro tenant."
+            )
+        if prestacion_por_id is None:
+            session.add(
+                PrestacionModel(
+                    id=prestacion_id,
+                    tenant_id=TENANT_DEMO,
+                    nombre=nombre,
+                    duracion_min=duracion_min,
+                    precio_ref=None,
+                    activa=True,
                 )
             )
 

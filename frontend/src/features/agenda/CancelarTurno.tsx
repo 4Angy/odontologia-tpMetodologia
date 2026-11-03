@@ -9,6 +9,7 @@ interface CancelarTurnoModalProps {
   turnoId: string;
   abierto: boolean;
   onCerrar: () => void;
+  onReprogramar?: () => void;
   onCancelado?: (turno: TurnoCancelado) => void;
   cancelarTurno?: CancelarTurnoFn;
 }
@@ -23,6 +24,7 @@ export function CancelarTurnoModal({
   turnoId,
   abierto,
   onCerrar,
+  onReprogramar,
   onCancelado,
   cancelarTurno = cancelarTurnoApi,
 }: CancelarTurnoModalProps): JSX.Element | null {
@@ -75,8 +77,15 @@ export function CancelarTurnoModal({
           <p>{error.message}</p>
           {esFueraDeTermino && error.action !== undefined && (
             <div>
-              {/* Placeholder C-07: reprogramar aún no existe como capability. */}
-              <button type="button" disabled title={error.action.hint}>
+              <button
+                type="button"
+                disabled={onReprogramar === undefined}
+                title={error.action.hint}
+                onClick={() => {
+                  onReprogramar?.();
+                  onCerrar();
+                }}
+              >
                 Reprogramar
               </button>
               <p>{error.action.hint}</p>
@@ -90,12 +99,14 @@ export function CancelarTurnoModal({
 
 interface CancelarTurnoButtonProps {
   turnoId: string;
+  onReprogramar?: () => void;
   onCancelado?: (turno: TurnoCancelado) => void;
   cancelarTurno?: CancelarTurnoFn;
 }
 
 export function CancelarTurnoButton({
   turnoId,
+  onReprogramar,
   onCancelado,
   cancelarTurno,
 }: CancelarTurnoButtonProps): JSX.Element {
@@ -109,6 +120,7 @@ export function CancelarTurnoButton({
         turnoId={turnoId}
         abierto={abierto}
         onCerrar={() => setAbierto(false)}
+        onReprogramar={onReprogramar}
         onCancelado={onCancelado}
         cancelarTurno={cancelarTurno}
       />

@@ -56,6 +56,15 @@ describe("ApiClient", () => {
     expect(resultado).toEqual({ id: "turno-1", estado: "cancelado" });
   });
 
+  it("devuelve archivos de texto sin intentar parsearlos como JSON", async () => {
+    const fetchImpl = vi.fn(async () => new Response("nombre,apellido\nAna,Paz", { status: 200 }));
+    const cliente = new ApiClient({ fetchImpl: fetchImpl as unknown as typeof fetch });
+
+    await expect(cliente.requestText("/export/pacientes.csv")).resolves.toBe(
+      "nombre,apellido\nAna,Paz",
+    );
+  });
+
   it("arma la url con la base configurada", async () => {
     const fetchImpl = vi.fn(async () => respuestaJson({}, 200));
     const cliente = new ApiClient({

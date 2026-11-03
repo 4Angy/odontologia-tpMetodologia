@@ -6,17 +6,23 @@ Las sondas (`database_probe`, `redis_probe`) son el punto de extensión de
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from functools import lru_cache
 
 from fastapi import Request
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 
 
-def get_session(request: Request):  # type: ignore[no-untyped-def]  # resuelto por create_app
-    return request.app.state.session_factory()
+def get_session(request: Request) -> Iterator[Session]:
+    session = request.app.state.session_factory()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 def get_now() -> datetime:

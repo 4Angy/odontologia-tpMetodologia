@@ -24,6 +24,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   request: <T>(path: string, init?: RequestInit) => Promise<T>;
+  requestText: (path: string, init?: RequestInit) => Promise<string>;
   clearError: () => void;
 }
 
@@ -38,8 +39,8 @@ interface AuthProviderProps {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const PERMISOS_POR_ROL: Record<string, readonly string[]> = {
-  recepcion: ["agenda", "pacientes", "cobros", "deudas", "recordatorios", "exportacion"],
-  odontologo: ["pacientes", "evoluciones", "presupuestos", "exportacion"],
+  recepcion: ["agenda", "pacientes", "cobros", "deudas", "recordatorios", "exportacion", "catalogo"],
+  odontologo: ["pacientes", "evoluciones", "presupuestos", "exportacion", "catalogo"],
   dueno: [
     "agenda",
     "reserva_publica",
@@ -53,6 +54,7 @@ const PERMISOS_POR_ROL: Record<string, readonly string[]> = {
     "configuracion",
     "exportacion",
     "auditoria",
+    "catalogo",
   ],
 };
 
@@ -179,6 +181,35 @@ export function AuthProvider({
     [accessToken, client, refresh],
   );
 
+  const requestText = useCallback(
+    async (path: string, init: RequestInit = {}): Promise<string> => {
+      const headers = new Headers(init.headers);
+      if (accessToken !== null) headers.set("Authorization", `Bearer ${accessToken}`);
+      try {
+        return await client.requestText(path, { ...init, headers });
+      } catch (requestError) {
+        if (
+          !(requestError instanceof ApiError) ||
+          ![401, 403].includes(requestError.status) ||
+          accessToken === null
+        ) {
+          throw requestError;
+        }
+        try {
+          const nuevoToken = await refresh();
+          const retryHeaders = new Headers(init.headers);
+          retryHeaders.set("Authorization", `Bearer ${nuevoToken}`);
+          return await client.requestText(path, { ...init, headers: retryHeaders });
+        } catch (refreshError) {
+          setAccessToken(null);
+          setUser(null);
+          throw refreshError;
+        }
+      }
+    },
+    [accessToken, client, refresh],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       accessToken,
@@ -195,9 +226,10 @@ export function AuthProvider({
       },
       logout,
       request,
+      requestText,
       clearError: () => setError(null),
     }),
-    [accessToken, error, loading, login, logout, request, user],
+    [accessToken, error, loading, login, logout, request, requestText, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

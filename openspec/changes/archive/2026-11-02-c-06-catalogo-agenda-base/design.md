@@ -40,9 +40,9 @@ Gaps observados:
 
 6. **Reglas globales de antelación cerradas.** La cancelación tiene un único valor global por tenant, default 24 horas, sin override por prestación. La reserva tiene un mínimo global por tenant de 2 horas, configurable por el dueño. Se calculan candidatos con inicios cada 30 minutos. El timeout de pago no forma parte de C-06. Los días/intervalos semanales se configuran por profesional en la zona del tenant; no se presuponen horas laborables concretas.
 
-7. **Auditar mutaciones según RN-GL-02.** `created_at`/`updated_at` no bastan. Reusar una bitácora común aprobada o acordar el contrato mínimo (tenant, actor, recurso, acción, instante UTC y cambio permitido); escribirla de forma atómica con catálogo/config. No registrar datos clínicos en auditoría. La consulta de auditoría sigue restringida al dueño según matriz de actores.
+7. **Auditar mutaciones según RN-GL-02.** `created_at`/`updated_at` no bastan. Reutilizar `audit_event` y `registrar_auditoria` incorporados por C-04, con tenant, actor, recurso, acción, instante UTC y nombres de campos modificados; escribir el evento en la misma transacción de catálogo/config. No registrar valores ni datos clínicos. La consulta de auditoría sigue restringida al dueño según matriz de actores.
 
-8. **Seed solo para demo y repetible.** Extender el seed sintético con prestaciones del KB (limpieza, consulta, arreglo y conducto, con duraciones editables) si el seed de demostración es el destino acordado; hacerlo idempotente y sin duplicados al reejecutar. No sembrar datos operativos para tenants reales sin una decisión explícita.
+8. **Seed limitado al tenant de demostración.** La KB define el catálogo inicial como “solo seed” y `seed_demo` crea explícitamente `tenant-demo`; por lo tanto, extender únicamente ese seed con una profesional sintética sin usuario asociado y las prestaciones limpieza (30 min), consulta (20 min), arreglo (45 min) y conducto (60 min). Hacerlo idempotente al reejecutar; nunca sembrar ni modificar tenants reales.
 
 9. **Independencia funcional y migración sin reescritura.** C-06 sigue independiente de C-04/C-05 y puede desarrollarse y probarse en paralelo. Se conserva `006_catalogo_agenda_base` sin editarla; si los horarios semanales requieren esquema, se añade una migración forward única y reversible sobre el head Alembic real. La relación de despliegue 005→006 existente se documenta como constraint técnico del chain, no como dependencia funcional.
 
@@ -65,7 +65,7 @@ Gaps observados:
 - [Datetimes naive] El driver podría fallar tarde o interpretarlos distinto → validar en la frontera HTTP y cubrir formatos con timezone ausente/UTC/desplazamiento.
 - [Disponibilidad de horario] Los horarios semanales deben configurarse por profesional en zona del tenant y los bloqueos prevalecen como excepciones → probar duración completa y conversión UTC sin asumir jornadas estándar.
 - [Migración de C-06 secuenciada] El chain existente exige 005 antes de 006 → mantener C-06 funcionalmente independiente y respetar el orden de despliegue actual; cambios para horarios van en migración forward, nunca editando 006.
-- [Auditoría inexistente] La escritura directa a ORM no identifica actor/cambio → adoptar bitácora común transaccional antes de dar el change por terminado.
+- [Auditoría no cableada al catálogo] La bitácora compartida de C-04 existe, pero el catálogo todavía escribe sin actor/cambio → reutilizarla transaccionalmente y probar rollback.
 - [Datos de agenda] Horarios pueden revelar actividad clínica aunque este módulo no contenga HCE → acceso tenant-scoped, RBAC y no usar datos reales en pruebas.
 
 ## Migration Plan

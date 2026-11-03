@@ -46,13 +46,23 @@ El sistema SHALL permitir consultar, crear, actualizar y dar de baja lógica a p
 ### Requirement: Opt-in requiere acción explícita y contacto válido
 El sistema SHALL mantener preferencias de comunicación separadas por paciente y canal, y activar WhatsApp solo tras una acción explícita con teléfono E.164 válido.
 
+Cada activación SHALL guardar la versión del texto presentado, el actor autenticado y el instante UTC. Esta evidencia técnica no implica una determinación de validez legal. Recepción y dueño pueden administrar opt-ins; odontología solo puede consultarlos.
+
 #### Scenario: Activar WhatsApp con teléfono válido
 - **WHEN** un usuario autorizado registra explícitamente opt-in WhatsApp para un paciente con teléfono válido
-- **THEN** el sistema guarda el estado del canal sin habilitar otros canales
+- **THEN** el sistema guarda el estado del canal, su evidencia de consentimiento y no habilita otros canales
 
 #### Scenario: Activar WhatsApp sin teléfono válido
 - **WHEN** se intenta activar WhatsApp sin teléfono o con un teléfono inválido
 - **THEN** el sistema rechaza la operación y no activa el opt-in
+
+#### Scenario: Activar WhatsApp sin versión del texto
+- **WHEN** se intenta activar WhatsApp sin identificar la versión del texto presentado
+- **THEN** el sistema rechaza la operación y no activa el opt-in
+
+#### Scenario: Odontología intenta modificar el opt-in
+- **WHEN** un usuario con rol únicamente odontología intenta modificar un opt-in
+- **THEN** el sistema deniega la mutación y conserva el estado existente
 
 ### Requirement: Cambio de teléfono revoca consentimiento y referencias al número anterior
 El sistema SHALL revocar el opt-in WhatsApp al cambiar el teléfono, exigir consentimiento nuevo para el número nuevo e impedir acciones pendientes habilitadas para el número anterior.
@@ -78,6 +88,8 @@ El sistema SHALL registrar quién, cuándo y qué cambió en cada mutación de p
 
 ### Requirement: Importación CSV informa cada fila
 El sistema SHALL importar pacientes desde CSV aislando duplicados y errores por fila y devolver un reporte que identifique filas importadas, duplicadas y fallidas.
+
+El archivo SHALL ser UTF-8 (con o sin BOM), medir como máximo 5 MiB y contener como máximo 5.000 filas de datos. Los encabezados aceptados son `nombre`, `apellido`, `dni`, `telefono` y `email`; `nombre` y `apellido` son obligatorios y no se permiten columnas desconocidas.
 
 #### Scenario: CSV con filas válidas, duplicadas e inválidas
 - **WHEN** se importa un CSV que contiene las tres clases de fila

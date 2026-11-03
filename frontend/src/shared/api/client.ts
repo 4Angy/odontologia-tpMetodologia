@@ -15,6 +15,7 @@ export interface ApiErrorBody {
   code: string;
   message: string;
   action?: ApiErrorAction;
+  alternativas?: string[];
 }
 
 /** Código genérico: el mismo que usa el backend cuando no hay regla aplicable. */
@@ -25,6 +26,7 @@ export const GENERIC_ERROR_MESSAGE = "Ocurrió un error inesperado. Probá de nu
 export class ApiError extends Error {
   readonly code: string;
   readonly action: ApiErrorAction | undefined;
+  readonly alternativas: string[] | undefined;
   readonly status: number;
 
   constructor(body: ApiErrorBody, status: number) {
@@ -32,6 +34,7 @@ export class ApiError extends Error {
     this.name = "ApiError";
     this.code = body.code;
     this.action = body.action;
+    this.alternativas = body.alternativas;
     this.status = status;
   }
 }
@@ -39,11 +42,20 @@ export class ApiError extends Error {
 export function isApiErrorBody(value: unknown): value is ApiErrorBody {
   if (typeof value !== "object" || value === null) return false;
   const candidato = value as Record<string, unknown>;
-  return typeof candidato["code"] === "string" && typeof candidato["message"] === "string";
+  return (
+    typeof candidato["code"] === "string" &&
+    typeof candidato["message"] === "string" &&
+    (candidato["alternativas"] === undefined ||
+      (Array.isArray(candidato["alternativas"]) &&
+        candidato["alternativas"].every((opcion) => typeof opcion === "string")))
+  );
 }
 
 export function toApiError(payload: unknown, status: number): ApiError {
-  if (isApiErrorBody(payload)) return new ApiError(payload, status);
+  if (isApiErrorBody(payload)) {
+    const candidato = payload as ApiErrorBody;
+    return new ApiError(candidato, status);
+  }
   return new ApiError({ code: GENERIC_ERROR_CODE, message: GENERIC_ERROR_MESSAGE }, status);
 }
 
@@ -90,6 +102,28 @@ export class ApiClient {
         throw toApiError(cuerpo, respuesta.status);
       }
       return cuerpo as T;
+    } finally {
+      clearTimeout(temporizador);
+    }
+  }
+
+  async requestText(path: string, init: RequestInit = {}): Promise<string> {
+    const controlador = new AbortController();
+    const temporizador = setTimeout(() => controlador.abort(), this.timeoutMs);
+    try {
+      const headers = new Headers(init.headers);
+      if (!headers.has("Accept")) headers.set("Accept", "text/csv, text/plain");
+      const respuesta = await this.fetchImpl(this.url(path), {
+        method: "GET",
+        ...init,
+        credentials: init.credentials ?? "include",
+        signal: init.signal ?? controlador.signal,
+        headers,
+      });
+      if (!respuesta.ok) {
+        throw toApiError(await this.leerCuerpo(respuesta), respuesta.status);
+      }
+      return await respuesta.text();
     } finally {
       clearTimeout(temporizador);
     }

@@ -66,6 +66,11 @@ ENV_BY_FIELD: dict[str, str] = {
     "smtp_url": "SMTP_URL",
     "public_base_url": "PUBLIC_BASE_URL",
     "seed_demo": "SEED_DEMO",
+    "attachments_s3_bucket": "ATTACHMENTS_S3_BUCKET",
+    "attachments_s3_endpoint_url": "ATTACHMENTS_S3_ENDPOINT_URL",
+    "attachments_s3_region": "ATTACHMENTS_S3_REGION",
+    "attachments_s3_access_key_id": "ATTACHMENTS_S3_ACCESS_KEY_ID",
+    "attachments_s3_secret_access_key": "ATTACHMENTS_S3_SECRET_ACCESS_KEY",
     "app_env": "APP_ENV",
     "log_level": "LOG_LEVEL",
 }
@@ -118,6 +123,11 @@ class Settings(BaseSettings):
     # --- Varios -------------------------------------------------------------
     public_base_url: str = "http://localhost:5173"
     seed_demo: bool = False
+    attachments_s3_bucket: str | None = None
+    attachments_s3_endpoint_url: str | None = None
+    attachments_s3_region: str = "us-east-1"
+    attachments_s3_access_key_id: SecretStr | None = None
+    attachments_s3_secret_access_key: SecretStr | None = None
 
     # --- Operativas ---------------------------------------------------------
     app_env: AppEnv = "dev"
@@ -150,6 +160,8 @@ class Settings(BaseSettings):
             "mp_access_token",
             "mp_webhook_secret",
             "smtp_url",
+            "attachments_s3_access_key_id",
+            "attachments_s3_secret_access_key",
         ):
             valor = getattr(self, campo)
             if isinstance(valor, SecretStr):

@@ -1,10 +1,10 @@
 """DTOs Pydantic v2: NUNCA exponer modelos SQLAlchemy (R3); extra='forbid' (R4)."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Strict(BaseModel):
@@ -35,6 +35,56 @@ class TurnoResponse(Strict):
     senia_pendiente_definicion: bool = False
 
 
+class TurnoIntervaloInput(Strict):
+    profesional_id: str = Field(min_length=1, max_length=64)
+    prestacion_id: str | None = Field(default=None, min_length=1, max_length=64)
+    inicio: datetime
+    fin: datetime
+
+    @model_validator(mode="after")
+    def validar_intervalo(self) -> TurnoIntervaloInput:
+        for campo, valor in (("inicio", self.inicio), ("fin", self.fin)):
+            if valor.tzinfo is None or valor.utcoffset() is None:
+                raise ValueError(f"{campo} debe incluir zona horaria.")
+        if self.fin <= self.inicio:
+            raise ValueError("El fin debe ser posterior al inicio.")
+        return self
+
+
+class TurnoCreateRequest(TurnoIntervaloInput):
+    paciente_id: str = Field(min_length=1, max_length=64)
+    sobreturno: bool = False
+    sobreturno_motivo: str | None = Field(default=None, max_length=500)
+
+
+class TurnoReprogramarRequest(TurnoIntervaloInput):
+    pass
+
+
+class TurnoAgendaResponse(Strict):
+    id: str
+    paciente_id: str
+    profesional_id: str
+    profesional_usuario_id: str | None = None
+    prestacion_id: str | None = None
+    inicio: datetime
+    fin: datetime
+    estado: str
+    origen: str
+    sobreturno: bool
+    sobreturno_motivo: str | None = None
+    sobreturno_autorizado_por: str | None = None
+    senia_id: str | None = None
+    cancelled_by: str | None = None
+    cancelled_at: datetime | None = None
+    motivo: str | None = None
+
+
+class ReprogramarTurnoResponse(Strict):
+    turno_anterior: TurnoAgendaResponse
+    turno_nuevo: TurnoAgendaResponse
+
+
 class ProfesionalCreate(Strict):
     nombre: str = Field(min_length=1, max_length=200)
     usuario_id: str | None = None
@@ -51,8 +101,8 @@ class ProfesionalResponse(ProfesionalCreate):
 
 class PrestacionCreate(Strict):
     nombre: str = Field(min_length=1, max_length=120)
-    duracion_min: int = Field(ge=5, le=240)
-    precio_ref: int | None = Field(default=None, ge=0)
+    duracion_min: int = Field(ge=5, le=240, strict=True)
+    precio_ref: int | None = Field(default=None, ge=0, strict=True)
     activa: bool = True
 
 
@@ -79,6 +129,36 @@ class BloqueoResponse(Strict):
     motivo: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class HorarioSemanalInput(Strict):
+    dia_semana: int = Field(ge=0, le=6, strict=True)
+    inicio: time
+    fin: time
+
+    @field_validator("inicio", "fin")
+    @classmethod
+    def horario_local_sin_offset(cls, value: time) -> time:
+        if value.tzinfo is not None:
+            raise ValueError("Los horarios semanales son horas locales sin offset.")
+        return value
+
+
+class HorariosSemanaUpdate(Strict):
+    horarios: list[HorarioSemanalInput]
+
+
+class HorarioSemanalResponse(Strict):
+    id: str
+    dia_semana: int
+    inicio: time
+    fin: time
+
+
+class HorariosSemanaResponse(Strict):
+    profesional_id: str
+    zona_horaria: str
+    horarios: list[HorarioSemanalResponse]
 
 
 class ConfigResponse(Strict):

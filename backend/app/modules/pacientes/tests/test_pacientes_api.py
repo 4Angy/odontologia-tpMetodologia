@@ -7,16 +7,27 @@ from sqlalchemy.orm import Session
 
 from app.core.security import mint_token
 from app.main import create_app
-from app.modules.agenda.models import TenantModel, UsuarioModel, UsuarioRoles
+from app.modules.agenda.models import (
+    ProfesionalModel,
+    TenantModel,
+    UsuarioModel,
+    UsuarioRoles,
+)
 
 
-def _token(session: Session, tenant: TenantModel, email: str = "dueno@test.com") -> str:
+def _token(
+    session: Session,
+    tenant: TenantModel,
+    email: str = "dueno@test.com",
+    roles: list[str] | None = None,
+) -> str:
+    roles = roles or [UsuarioRoles.DUENO.value]
     user = UsuarioModel(
         id=str(uuid.uuid4()),
         tenant_id=tenant.id,
         email=email,
-        nombre="Dueño",
-        roles=[UsuarioRoles.DUENO.value],
+        nombre="Usuario de prueba",
+        roles=roles,
         activo=True,
     )
     session.add(user)
@@ -84,7 +95,7 @@ def test_optin_whatsapp_requiere_telefono_y_aisla_por_tenant(session_factory):
 
     r1 = client.put(
         f"/pacientes/{paciente_id}/optins",
-        json={"canal": "whatsapp", "estado": True},
+        json={"canal": "whatsapp", "estado": True, "version_texto": "aviso-v1"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r1.status_code == 200, r1.text
@@ -140,6 +151,27 @@ def test_import_csv_y_export_pacientes(session_factory):
     assert "Ana" in body
     assert "Marta" in body
 
+    otro_tenant = TenantModel(
+        id=str(uuid.uuid4()),
+        slug="tenant-d-otro",
+        nombre="Tenant D otro",
+    )
+    session.add(otro_tenant)
+    session.commit()
+    otro_token = _token(session, otro_tenant, email="dueno-otro@test.com")
+    otro_paciente = client.post(
+        "/pacientes",
+        json={"nombre": "Solo", "apellido": "Ajeno"},
+        headers={"Authorization": f"Bearer {otro_token}"},
+    )
+    assert otro_paciente.status_code == 201
+    export = client.get(
+        "/export/pacientes.csv",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert export.status_code == 200
+    assert "Ajeno" not in export.text
+
     session.close()
 
 
@@ -150,7 +182,21 @@ def test_evolucion_y_presupuesto_alimentan_ficha(session_factory):
     tenant = TenantModel(id=str(uuid.uuid4()), slug="tenant-e", nombre="Tenant E")
     session.add(tenant)
     session.flush()
-    token = _token(session, tenant)
+    token = _token(
+        session,
+        tenant,
+        roles=[UsuarioRoles.DUENO.value, UsuarioRoles.ODONTOLOGO.value],
+    )
+    odontologo = session.query(UsuarioModel).filter_by(email="dueno@test.com").one()
+    session.add(
+        ProfesionalModel(
+            tenant_id=tenant.id,
+            usuario_id=odontologo.id,
+            nombre="Odontóloga sintética",
+            activo=True,
+        )
+    )
+    session.flush()
 
     paciente = client.post(
         "/pacientes",
@@ -181,13 +227,32 @@ def test_evolucion_y_presupuesto_alimentan_ficha(session_factory):
     assert presupuesto.json()["total_cents"] == 40000
 
     paciente_actualizado = client.get(f"/pacientes/{paciente_id}", headers={"Authorization": f"Bearer {token}"})
+    assert paciente_actualizado.json()["saldo"] == 0
+
+    aprobado = client.patch(
+        f"/pacientes/{paciente_id}/presupuestos/{presupuesto.json()['id']}/estado",
+        json={"estado": "aprobado"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert aprobado.status_code == 200, aprobado.text
+    paciente_actualizado = client.get(
+        f"/pacientes/{paciente_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     assert paciente_actualizado.json()["saldo"] == 40000
+    export = client.get(
+        "/export/pacientes.csv",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert export.status_code == 200
+    assert ",40000\r\n" in export.text
 
     session.close()
 
 
 def test_adjunto_rechaza_archivo_grande(session_factory):
     app = create_app(session_factory=session_factory)
+    app.state.attachment_storage = object()
     client = TestClient(app)
     session = session_factory()
     tenant = TenantModel(id=str(uuid.uuid4()), slug="tenant-f", nombre="Tenant F")
@@ -202,12 +267,12 @@ def test_adjunto_rechaza_archivo_grande(session_factory):
     )
     paciente_id = paciente.json()["id"]
 
+    client.headers.update({"Content-Type": "image/jpeg", "X-Filename": "foto.jpg"})
     r = client.post(
         f"/pacientes/{paciente_id}/adjuntos",
-        json={"nombre": "foto.png", "tipo": "image/png", "tamano_bytes": 11_000_000},
+        content=b"\xff\xd8\xff" + b"x" * (10 * 1024 * 1024),
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert r.status_code == 422, r.text
-    assert "10 MB" in r.json()["message"]
+    assert r.status_code == 413, r.text
 
     session.close()

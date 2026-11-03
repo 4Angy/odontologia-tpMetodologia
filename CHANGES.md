@@ -181,14 +181,15 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: SU-02 (3-roles-1-persona genera caos de permisos/auditoría inútil) — mitigación: la auditoría registra rol activo por acción (DD-06) y test de usabilidad con 2 consultorios unipersonales antes de crear un rol "encargado".
 
 ### [C-04] `pacientes-crud-optin`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-03) — implementación y verificación completas.
 - **Scope**: Ficha base del paciente + opt-ins + importación/exportación (base de US-009, US-010 completo)
-  - Modelos: `Paciente` (teléfono E.164, dni/email opcionales, `saldo` derivado no editable), `OptIn` (canal whatsapp/email, estado); validación: teléfono requerido si opt-in WhatsApp activo (RN-PA)
-  - Endpoints: `CRUD /pacientes` (búsqueda por apellido/teléfono/dni con índices compuestos), `GET/PUT /pacientes/:id/optins`, `POST /pacientes/import-csv` (reporte ok/duplicadas/fallidas), `GET /export/:recurso.csv` (pacientes, turnos, cobros — RN-GL-04 anti lock-in)
-  - Regla RN-PA-02: cambio de número invalida tokens/pendientes asociados al anterior
+  - Modelos: `Paciente` (teléfono E.164, dni/email opcionales, `saldo` derivado no editable), `OptIn` (canal whatsapp/email, estado) con evidencia de versión del texto, actor y fecha UTC.
+  - Endpoints: `CRUD /pacientes` (búsqueda tenant-scoped por apellido/teléfono/dni), `GET/PUT /pacientes/:id/optins`, `POST /pacientes/import-csv` (reporte por fila, UTF-8 con/sin BOM, máximo 5 MiB y 5.000 filas), `GET /export/pacientes.csv`.
+  - Regla RN-PA-02: el cambio de teléfono revoca el opt-in y registra en auditoría un hash del destino anterior para que C-09 invalide trabajos pendientes; C-04 no implementa el worker ni administra tokens de paciente.
+  - Auditoría de mutaciones transaccional y baja lógica; turnos/cobros quedan fuera de la exportación C-04 y pertenecen a C-07/C-11.
   - Frontend: lista + detalle + alta de paciente (< 30s de carga), gestión de opt-in visible, pantalla de importación con reporte
-  - Migración 003: tablas `paciente`, `optin`; índices `(tenant_id, apellido)`, `(tenant_id, telefono)`, `(tenant_id, dni)`
-  - Tests: CRUD + aislamiento, E.164 inválido rechaza opt-in, import CSV con duplicados, export incluye todo lo propio
+  - Migraciones: `004_pacientes_optin` conserva el esquema base; `007_auditoria_consentimiento` agrega auditoría y evidencia, con `downgrade`.
+  - Tests: CRUD/RBAC/aislamiento, E.164 y UTC, evidencia de opt-in, importación por fila, exportación tenant-scoped, baja lógica y auditoría atómica.
 - **Dependencias**: C-03
 - **Governance**: MEDIO (datos de salud Ley 25.326: opt-in + minimización; sin pagos ni auth)
 - **Leer antes**:
@@ -199,13 +200,14 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: PA-07 (adecuación legal fina de opt-in/DPA queda para lanzamiento con abogado) — este change deja textos de opt-in parametrizables, no quemados; riesgo de importar base sucia (mitigación: reporte fila por fila, nunca falla silenciosa).
 
 ### [C-05] `ficha-clinica-presupuestos`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-03) — implementación y verificación completas; `openspec/changes/archive/2026-11-02-c-05-ficha-clinica-presupuestos/`.
 - **Scope**: HCE mínima + adjuntos + presupuestos simples (resto de US-009)
-  - Modelos: `Evolucion` (motivo, detalle, `firma_simple` bool + timestamp con alcance legal declarado — NO firma digital Ley 25.506), `Adjunto` (RX/fotos, límite 10 MB configurable), `Presupuesto` + `PresupuestoItem` (alimenta saldo/deuda, RN-CO-05)
-  - Endpoints: `GET /pacientes/:id/evoluciones` (timeline desc), `POST /pacientes/:id/evoluciones`, `POST /pacientes/:id/adjuntos` (validación tipo/tamaño), `CRUD /pacientes/:id/presupuestos`
-  - Frontend: ficha única con timeline de evoluciones + adjuntos + presupuestos/saldo (Flujo 3, pasos 1-3)
-  - Migración 004: tablas `evolucion`, `adjunto`, `presupuesto`, `presupuesto_item`; índice `(tenant_id, paciente_id, fecha desc)`
-  - Tests: evolución firmada registra auditoría, adjunto > límite rechaza con mensaje claro, presupuesto alimenta saldo derivado
+  - Evoluciones conformes a ADR-003: profesional autenticado, fecha UTC, ancla FDI opcional completa, firma simple y alcance legal explícito (no firma digital Ley 25.506); auditoría transaccional.
+  - Adjuntos privados S3-compatible: JPEG/PNG/PDF validados por contenido hasta 10 MiB, cifrado SSE-S3 y URLs de descarga firmadas por 5 minutos.
+  - Presupuestos con CRUD y estados borrador/aprobado/aceptado; saldo derivado en centavos, sin escritura directa. Los borradores no computan; C-11 integrará cobros/créditos.
+  - Frontend: ficha integrada con timeline, adjuntos, presupuestos y saldo; recepción no accede al contenido clínico.
+  - Migración forward `010_c05_contrato_clinico`, reversible, preserva datos existentes y completa el contrato ADR-003.
+  - Verificación: 24 pruebas backend del módulo pacientes, 46 pruebas frontend, typecheck y build exitosos; validación OpenSpec 8/8 specs.
 - **Dependencias**: C-04
 - **Governance**: MEDIO (HCE mínima con implicancia legal declarada; sin pagos)
 - **Leer antes**:
@@ -222,32 +224,34 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > C-06 corre en paralelo con C-04. C-07 exige ambos (turno referencia paciente + profesional/prestación).
 
 ### [C-06] `catalogo-agenda-base`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-03) — `openspec/changes/archive/2026-11-02-c-06-catalogo-agenda-base/`
 - **Scope**: Catálogo de agenda + configuración del tenant (base de US-001, US-004)
   - Modelos: `Profesional` (`usuario_id` nullable — puede no tener login; `color_agenda`, `activo`), `Prestacion` (`duracion_min`, `precio_ref` nullable para seña/presupuesto, `activa`), `Bloqueo` (profesional/sillón + rango), extensión de `Config` (antelacion_hs default 24, antelación mínima de reserva default 2h, recordatorios T-48h/T-24h)
-  - Endpoints: `CRUD /profesionales`, `CRUD /prestaciones`, `CRUD /bloqueos`, `GET/PUT /config` (solo `dueno`, RN-AG-02; rige para turnos futuros)
-  - Cálculo de huecos reales: duración por prestación + bloqueos + antelación mínima (servicio reutilizable por C-07 y C-08)
-  - Frontend: pantallas de profesionales/prestaciones/bloqueos + config del tenant (regla 24h editable)
-  - Migración 005: tablas `profesional`, `prestacion`, `bloqueo`; seed de prestaciones (limpieza 30', consulta 20', arreglo 45', conducto 60' — duraciones editables)
-  - Tests: huecos excluyen bloqueos, config solo editable por dueño, cambio no retroactivo
+  - Endpoints tenant-scoped: CRUD de profesionales, prestaciones y bloqueos; configuración global editable solo por `dueno`, con 24 h para cancelación y 2 h para reserva (sin override por prestación)
+  - Horarios semanales locales por profesional y zona del tenant; servicio reutilizable de disponibilidad con candidatos cada 30 min, duración completa, bloqueos, turnos activos y antelación mínima; instantes normalizados a UTC
+  - Frontend con CRUD de catálogo, horarios, bloqueos y configuración, RBAC de lectura/escritura y errores visibles
+  - Seed sintético e idempotente, limitado a `tenant-demo`: una profesional y prestaciones limpieza (30 min), consulta (20 min), arreglo (45 min), conducto (60 min)
+  - Auditoría transaccional de mutaciones del catálogo/configuración usando `audit_event`
+  - Migraciones: conserva el chain `005 → 006 → 007 → 008`; `008_horarios_profesional` agrega horarios semanales con downgrade reversible. La suite validó upgrade/downgrade de 008 directamente; el chain completo no se ejecutó en SQLite porque 002 usa `regexp_replace` de PostgreSQL
+  - Verificación: 57 pruebas backend de agenda, 33 pruebas frontend, typecheck y build exitosos
 - **Dependencias**: C-03
 - **Governance**: MEDIO (config con efecto en reglas de negocio; sin dinero ni datos clínicos)
 - **Leer antes**:
   - `knowledge-base/04_modelo_de_datos.md` §profesional / prestacion + §Seed data inicial
   - `knowledge-base/05_reglas_de_negocio.md` §RN-AG-02 + §RN-AG-06
   - `knowledge-base/06_funcionalidades.md` §US-001 (CA-1) + §US-004
-  - `knowledge-base/10_preguntas_abiertas.md` §PA-04 (regla 24h por prestación) + §PA-08 (defaults 2h/30 min)
-- **Riesgos**: PA-04/PA-08 son defaults propuestos sin validar (24h igual para primera visita con seña que para control; 2h/30 min) — mitigación: todos configurables por tenant desde este change, nunca constantes quemadas.
+  - `knowledge-base/10_preguntas_abiertas.md` §PA-08 (defaults de 2 h/30 min)
+- **Riesgos**: la cadena Alembic debe ejecutarse en el orden existente `005 → 006 → 007 → 008`; no implica dependencia funcional de C-06 respecto de C-05.
 
 ### [C-07] `turnos-agenda-interna`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-03) — implementación y verificación completas.
 - **Scope**: Agenda interna completa con anti-solape y regla 24h (US-001 + US-004)
   - Modelo: `Turno` (paciente, profesional, prestación nullable, `inicio`/`fin` timestamptz, `estado`: pendiente_confirmacion|confirmado|presente|ausente|cancelado|reprogramado, `origen`, `token_publico` unique, `senia_id` nullable)
   - Endpoints: `CRUD /turnos`, `POST /turnos/:id/confirmar|cancelar|reprogramar|presente|ausente`, `GET /agenda/dia|semana`; validación de solape por profesional en app + índice (RN-AG-03); colisión → 409 con 3 huecos alternativos (RN-AG-03); sobreturno explícito flag + motivo, nunca silencioso (RN-AG-04)
   - Cancelación: valida antelación contra config (RN-AG-01/02); fuera de término → error `code: RN-AG-01` + oferta de reprogramar; reprogramar arrastra seña (RN-AG-05, ejecutado en C-12)
   - Idempotency keys en creación de turnos (doble-clic no duplica)
   - Frontend: vista día/semana multi-profesional, alta de turno con huecos propuestos, gestión del día (presente/ausente), cancelación con mensaje de error mostrable en español-AR (RN-GL-01)
-  - Migración 006: **extiende** `turno` (ya creada por `0001_cancelacion_turno`) con `token_publico`, `origen`, `senia_id`; índices `(tenant_id, profesional_id, inicio)`, `(tenant_id, inicio)`
+  - Migración 009: **extiende** `turno` (ya creada por `0001_cancelacion_turno`) con `token_publico`, `origen`, `senia_id`, clave idempotente y datos de sobreturno; índices tenant/profesional/tiempo. Revisión confirmada después de `008_horarios_profesional`.
   - Tests: solape rechaza + sugiere 3 huecos, sobreturno exige motivo y permiso, cancelación <24h devuelve `RN-AG-01`, idempotencia
 - **Dependencias**: C-04, C-06
 - **Governance**: ALTO (máquina de estados del turno + errores trazables RN-XX que ven los usuarios)
@@ -266,7 +270,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Opt-in WhatsApp capturado en la reserva (RN-PA-01); si la prestación exige seña → crea preferencia MP y devuelve `checkout_url` (contrato definido aquí, cobrado en C-12)
   - Pago no acreditado en 30 min → job libera el hueco y avisa (default configurable, Flujo 1)
   - Frontend: página pública liviana `/r/:slug` (fuera del shell autenticado), botones de WhatsApp con token
-  - Migración 007: columnas `turno.token_publico` (unique) + expiración; índice `token_publico`
+  - Migración 010: expiración de `turno.token_publico`; índice `token_publico` (la columna y su unicidad se agregan en C-07)
   - Tests: reserva respeta bloqueos, token expirado rechaza, rate-limit en rutas públicas, turno nace `pendiente_confirmacion`
 - **Dependencias**: C-07
 - **Governance**: ALTO (superficie pública sin auth: abuso/spam/seguridad; tokens con expiración)
@@ -293,7 +297,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Endpoints: `POST /notificaciones/test`, `GET /notificaciones/consumo` (mensajes + costo estimado por período), `POST /webhooks/whatsapp` (estados + inbound idempotente por `provider_msg_id`)
   - Proveedor concreto según ADR-001 de C-01 (`WHATSAPP_PROVIDER` official|gateway)
   - Frontend: panel de consumo/costo WhatsApp visible para el dueño (US-012 CA-1)
-  - Migración 008: tablas `notificacion_envio`, `plantilla`; índices `(tenant_id, created_at)`, `(tenant_id, estado)`
+  - Migración 011: tablas `notificacion_envio`, `plantilla`; índices `(tenant_id, created_at)`, `(tenant_id, estado)`
   - Tests: 1 mensaje por ventana, sin opt-in no envía, reintento + fallback, webhook duplicado idempotente, panel muestra costos
 - **Dependencias**: C-07, C-08 (usa C-04 opt-ins; corre en paralelo con C-11)
 - **Governance**: ALTO (integración externa falible + costos por mensaje + anti-spam legal)
@@ -312,7 +316,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Endpoints: `POST /lista-espera` (alta), `GET /lista-espera` (cola auditable), acciones aceptar/declinar por token (reutiliza mecanismo C-08)
   - Motor: al liberarse un hueco compatible → primer `activa` elegible pasa a `ofrecida` + WhatsApp con TTL default 2h; acepta → turno asignado (arrastra seña si corresponde, RN-AG-05); declina/vence → siguiente; sin opt-in → se salta con motivo registrado (RN-PA-01)
   - Frontend: vista de cola para recepción (estados auditables), botón de oferta manual
-  - Migración 009: tabla `lista_espera`; índice `(tenant_id, estado, prioridad)`
+  - Migración 012: tabla `lista_espera`; índice `(tenant_id, estado, prioridad)`
   - Tests: oferta al primero elegible, TTL vence → pasa al siguiente, aceptar asigna turno y sale de la lista, sin opt-in se salta
 - **Dependencias**: C-09 (usa el motor de envíos; corre en paralelo con C-12)
 - **Governance**: MEDIO (máquina de estados con TTL; sin dinero directo)
@@ -337,7 +341,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Endpoints: `CRUD /cobros` (alta < 30s), `GET /deudas` (ordenada por antigüedad/monto), `POST /caja/cierre-dia`, `POST /caja/ajuste` (nota auditada), `GET /caja/cierre-dia` (conciliación por medio)
   - UI honesta (RN-CO-01 + ADR-002): la pantalla declara que v1 es caja manual sin comprobantes fiscales
   - Frontend: pantalla de caja (cobro rápido, deudas, cierre del día con totales por medio)
-  - Migración 010: tablas `cobro`, `cierre_caja`; índices `(tenant_id, fecha)`, `(tenant_id, paciente_id)`
+  - Migración 013: tablas `cobro`, `cierre_caja`; índices `(tenant_id, fecha)`, `(tenant_id, paciente_id)`
   - Tests: saldo derivado automático, cierre inmutable (edición directa rechaza), ajuste deja auditoría, deudas ordenadas
 - **Dependencias**: C-04, C-07
 - **Governance**: CRITICO (dinero: inmutabilidad del cierre + saldo derivado; error aquí = pérdida de confianza del dueño)
@@ -357,7 +361,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Reprogramar arrastra la seña (RN-AG-05; si el nuevo turno no requiere seña → saldo a favor); devolución parametrizable `no_devuelve|devuelve_50|devuelve_100` según antelación (RN-CO-03, default: en término → saldo a favor, fuera de término → se pierde)
   - Webhook-first con retries MP; ninguna caída de MP bloquea el flujo local (RN-GL-03)
   - Frontend: config de seña por prestación, estado de seña en el turno, aviso de arrastre al reprogramar
-  - Migración 011: tabla `senia` (+ `turno.senia_id`)
+  - Migración 014: tabla `senia` (+ `turno.senia_id`, si aún no existe)
   - Tests: webhook duplicado idempotente, reprogramar arrastra (no cobra dos veces), devolución según política, sin seña acreditada no confirma (cuando es requerida)
 - **Dependencias**: C-08, C-11
 - **Governance**: CRITICO (dinero real + webhooks externos + idempotencia de pagos)
@@ -379,7 +383,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Estado**: `[ ]` pendiente
 - **Scope**: Transparencia radical + auditoría + hardening de lanzamiento (US-012 + salida a producción)
   - Transparencia (US-012, diferenciador): sección "qué no hace (aún)" con roadmap honesto (incluye odontograma v2+ y FE ARCA — gestiona R1/SU-03 en la UI), precio ARS del plan visible in-app (SU-04), panel de consumo WhatsApp por período (datos de C-09)
-  - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 012: tabla `auditoria`
+  - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 015: tabla `auditoria`
   - Hardening: rate-limit en todas las rutas públicas (C-08) + login (C-03), validación E.164/tamaños, backups Postgres diarios + cifrado en reposo del proveedor, rotación manual de secretos documentada (runbook v1), checklist de lanzamiento (métricas §01: ausentismo −30%, time-to-value < 24h, transparencia binaria)
   - Seed demo completo (tenant demo + agenda + pacientes + caja de ejemplo) y guía de onboarding en el día (alta + CSV + prueba sin tarjeta)
   - Tests: auditoría registra mutaciones, rate-limit bloquea abuso, seed demo levanta un tenant operable, checklist de lanzamiento en verde

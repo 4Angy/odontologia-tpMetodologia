@@ -22,7 +22,7 @@ export function AppShell({ children }: AppShellProps): JSX.Element {
       "/agenda": "agenda",
       "/pacientes": "pacientes",
       "/caja": "cobros",
-      "/config": "configuracion",
+      "/config": "catalogo",
     };
     const permiso = permisosPorRuta[enlace.to] ?? enlace.to.slice(1);
     return tienePermiso(user, permiso);

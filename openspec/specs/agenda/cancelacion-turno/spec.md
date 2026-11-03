@@ -22,15 +22,21 @@ El sistema SHALL permitir cancelar un turno en estado `confirmado` o `pendiente_
 - **WHEN** un turno fue cancelado en término
 - **THEN** la query de activos ya no lo devuelve (hueco observable); la API de disponibilidad que reutiliza ese hueco es dependencia de C-07, no de este slice. Un hueco dentro de un bloqueo sigue no-reservable.
 
-### Requirement: Validación de antelación mínima con error trazable y placeholder
+### Requirement: Validación de antelación mínima con error trazable y reprogramación
 
-El sistema SHALL rechazar la cancelación fuera de término (`inicio - ahora < antelacion_cancel_hs`) con `409`, cuerpo `{code: "RN-AG-01", message, action: {type: "reprogramar", hint}}` en español-AR mostrable, donde `action` es un placeholder documentado (reprogramar es C-07; frontend lo muestra deshabilitado/informativo), sin mutar el turno.
+El sistema SHALL rechazar la cancelación fuera de término (`inicio - ahora < antelacion_cancel_hs`) con `409`, cuerpo `{code: "RN-AG-01", message, action: {type: "reprogramar", hint}}` en español-AR mostrable, sin mutar el turno. La acción `reprogramar` SHALL permitir a recepción o dueño iniciar el flujo interno de reprogramación.
 
 #### Scenario: Cancelación fuera de término
 
 - **GIVEN** existe un turno en estado `confirmado` o `pendiente_confirmacion` con `inicio - now < antelacion_cancel_hs` y un usuario autenticado con permiso de agenda
 - **WHEN** se intenta cancelar un turno que inicia dentro de la ventana de antelación (p. ej. 2h antes con config 24h)
 - **THEN** el sistema responde `409` con `code: "RN-AG-01"`, mensaje en español-AR y `action.type: "reprogramar"` con `hint`, y el turno conserva su estado previo
+
+#### Scenario: Iniciar reprogramación desde la acción ofrecida
+
+- **GIVEN** recepción o dueño recibe el error de cancelación fuera de término con `action.type: "reprogramar"`
+- **WHEN** selecciona la acción en la agenda interna y elige un horario sugerido o lo ingresa manualmente
+- **THEN** el turno anterior pasa a `reprogramado` solo cuando la operación de reprogramación se completa
 
 #### Scenario: Límite exacto de antelación
 

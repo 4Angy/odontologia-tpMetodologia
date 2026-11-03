@@ -34,11 +34,11 @@ Gaps observados:
 
 3. **Permisos siguen la matriz de actores, no las autorizaciones amplias actuales.** Odontólogo registra/gestiona sus evoluciones; dueño puede consultarlas; recepción no accede al contenido clínico. Presupuestos permiten lectura de recepción y operaciones autorizadas de odontólogo/dueño según KB. La unión de roles continúa aplicando. Cualquier aclaración de qué significa "propias" debe fijar cómo se vincula una evolución con profesional/usuario, no confiar en un ID aportado por frontend.
 
-4. **Auditoría explícita, ligada a la transacción.** Diseñar/reutilizar un registro mínimo común con tenant, actor autenticado, recurso, acción, instante UTC y cambio permitido. La auditoría se confirma atómicamente con la mutación y tiene lectura tenant-scoped para dueño. No almacenar el texto íntegro de evoluciones en logs ni en errores. Timestamps del ORM no sustituyen RN-GL-02. Si la estructura común de auditoría se implementa en otro change, C-05 queda bloqueado hasta disponer del contrato.
+4. **Auditoría explícita, ligada a la transacción.** Reutilizar `audit_event` con tenant, actor autenticado, recurso, acción, instante UTC y nombres de campos modificados; confirmar atómicamente con la mutación y permitir consulta tenant-scoped solo al dueño. No registrar valores clínicos ni el texto íntegro de evoluciones en logs, errores o auditoría. Timestamps del ORM no sustituyen RN-GL-02.
 
-5. **Adjuntos en almacenamiento privado compatible con S3.** Guardar bytes cifrados en almacenamiento privado compatible con S3, aceptar JPEG/PNG/PDF hasta 10 MiB y validar el tipo real del contenido, no solo el nombre o MIME declarado. Las descargas se autorizan tenant-scoped y se entregan mediante URLs firmadas de corta duración. No fijar proveedor ni aceptar URLs libres del cliente como prueba de archivo verificado. Los detalles de interacción de carga/descarga de la UI y el proveedor concreto siguen abiertos; la política de tipos, tamaño, privacidad y cifrado no.
+5. **Adjuntos en almacenamiento privado compatible con S3.** La UI envía el archivo al backend, que valida JPEG/PNG/PDF de hasta 10 MiB por contenido real y guarda en un bucket privado configurable usando cifrado del lado del almacenamiento. Las descargas autorizadas tenant-scoped se entregan mediante URLs firmadas de corta duración. No fijar proveedor ni aceptar URLs libres del cliente como prueba de archivo verificado.
 
-6. **Saldo derivado y presupuesto CRUD integrado con C-11.** El total se calcula desde ítems en centavos, sin `float`. Un borrador no afecta deuda; solo presupuestos aprobados o aceptados contribuyen, restando cobros/créditos aplicados por C-11. El saldo se deriva y ningún endpoint lo edita. C-05 implementa CRUD y estados del presupuesto, pero no cobros. Antes de aplicar, debe armonizarse la redacción aparentemente invertida de RN-CO-05 con esta fórmula aprobada; no se modifica KB en este alcance.
+6. **Saldo derivado y presupuesto CRUD integrado con C-11.** El total se calcula desde ítems en centavos, sin `float`. Un borrador no afecta deuda; solo presupuestos aprobados o aceptados contribuyen, restando cobros y créditos aplicados por C-11. El saldo se deriva y ningún endpoint lo edita. C-05 implementa CRUD para los estados `borrador`, `aprobado` y `aceptado`, sin cobros ni estados adicionales. Esta es la interpretación ejecutable de RN-CO-05 para el alcance C-05; no se modifica la KB ni se cambia su texto en este change.
 
 7. **UI en features de React ya existentes.** Reemplazar el placeholder con ficha paciente y componentes accesibles para timeline, adjuntos y presupuestos; el cliente HTTP reusa el API común. Los datos UI usan tipos explícitos TypeScript, validan errores de API y no almacenan datos de salud innecesarios en persistencia local.
 
@@ -73,8 +73,10 @@ Gaps observados:
 
 ## Open Questions
 
-- ¿Cómo se vincula `profesional_id` con el usuario autenticado para determinar qué evoluciones puede gestionar un odontólogo, incluidos profesionales sin usuario?
-- ¿Qué interacción de carga/descarga tendrá la interfaz con el almacenamiento privado compatible con S3, y qué proveedor concreto se seleccionará?
-- ¿Qué estados adicionales (por ejemplo, rechazado/anulado) y transiciones de presupuesto, si se necesitan, acompañan los estados borrador/aprobado/aceptado ya definidos?
-- ¿Existe ya fuera de este módulo un registro común de auditoría que C-05 pueda reutilizar? Si no, ¿qué recurso permitirá al dueño consultar eventos?
-- ¿Cómo se resuelve la retención/supresión de evoluciones y auditoría frente a las obligaciones legales y al derecho del paciente?
+Decisiones cerradas para C-05:
+
+- La autoría clínica se vincula por `profesional.usuario_id`; solo el odontólogo cuyo usuario coincide puede crear y gestionar evoluciones. Un profesional sin usuario asociado no puede firmar en el sistema. El dueño consulta, no crea evoluciones; recepción no accede al contenido clínico.
+- La UI carga al backend y descarga mediante URL firmada temporal. El almacenamiento será privado y compatible con S3, configurado por entorno, sin elegir proveedor en C-05.
+- Presupuestos usan únicamente `borrador`, `aprobado` y `aceptado`; se permite CRUD y cada eliminación se audita. Solo los dos últimos estados contribuyen a deuda.
+- Se reutiliza `audit_event` en la misma transacción; registra nombres de campos, no valores clínicos. El endpoint de lectura queda limitado al dueño.
+- C-05 no implementa purga automática. La baja de paciente permanece lógica y se conservan historia clínica y auditoría; la política legal de retención requiere definición especializada antes de habilitar supresión de esos registros.

@@ -88,6 +88,19 @@ def test_error_inesperado_no_expone_trazas_ni_sql():
     assert "/app/" not in serializado
 
 
+def test_log_de_error_inesperado_no_registra_el_contenido_de_la_excepcion(caplog):
+    secreto = "dato-clinico-sintetico"
+    cliente = _cliente_que_falla(RuntimeError(secreto))
+
+    with caplog.at_level(logging.ERROR, logger="odontologia.api"):
+        respuesta = cliente.get("/boom")
+
+    registros = [r for r in caplog.records if r.name == "odontologia.api"]
+    assert respuesta.status_code == 500
+    assert registros[-1].context["error_type"] == "RuntimeError"
+    assert secreto not in json.dumps(registros[-1].context)
+
+
 def test_el_log_del_error_coincide_con_el_code_devuelto_al_usuario(caplog):
     logger = logging.getLogger("odontologia.api")
     cliente = _cliente_que_falla(

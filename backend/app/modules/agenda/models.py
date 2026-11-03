@@ -8,17 +8,20 @@ from __future__ import annotations
 import re
 import unicodedata
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from enum import Enum
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     ForeignKey,
+    Index,
     Integer,
     String,
+    SmallInteger,
     Text,
     TIMESTAMP,
+    Time,
     UniqueConstraint,
     text,
 )
@@ -209,8 +212,55 @@ class BloqueoModel(TenantMixin, AuditMixin, Base):
     motivo: Mapped[str | None] = mapped_column(Text(), nullable=True)
 
 
+class HorarioProfesionalModel(TenantMixin, AuditMixin, Base):
+    __tablename__ = "horario_profesional"
+    __table_args__ = (
+        CheckConstraint(
+            "dia_semana >= 0 AND dia_semana <= 6",
+            name="ck_horario_profesional_dia_semana",
+        ),
+        CheckConstraint(
+            "hora_fin > hora_inicio",
+            name="ck_horario_profesional_rango",
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "profesional_id",
+            "dia_semana",
+            "hora_inicio",
+            name="ux_horario_profesional_inicio",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    profesional_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    dia_semana: Mapped[int] = mapped_column(SmallInteger(), nullable=False)
+    hora_inicio: Mapped[time] = mapped_column(Time(), nullable=False)
+    hora_fin: Mapped[time] = mapped_column(Time(), nullable=False)
+
+
 class TurnoModel(Base):
     __tablename__ = "turno"
+    __table_args__ = (
+        Index(
+            "ix_turno_tenant_profesional_inicio",
+            "tenant_id",
+            "profesional_id",
+            "inicio",
+        ),
+        Index("ix_turno_tenant_inicio", "tenant_id", "inicio"),
+        Index("ux_turno_token_publico", "token_publico", unique=True),
+        Index(
+            "ux_turno_tenant_idempotency_key",
+            "tenant_id",
+            "idempotency_key",
+            unique=True,
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(
@@ -228,6 +278,19 @@ class TurnoModel(Base):
     motivo: Mapped[str | None] = mapped_column(Text(), nullable=True)
     senia_pendiente_definicion: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=False, server_default="false"
+    )
+    token_publico: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    origen: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="mostrador", server_default="mostrador"
+    )
+    senia_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sobreturno: Mapped[bool] = mapped_column(
+        Boolean(), nullable=False, default=False, server_default="false"
+    )
+    sobreturno_motivo: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    sobreturno_autorizado_por: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
     )
 
 
@@ -266,6 +329,7 @@ __all__ = [
     "BloqueoModel",
     "ConfigModel",
     "EnumArrayType",
+    "HorarioProfesionalModel",
     "PrestacionModel",
     "ProfesionalModel",
     "TenantMixin",

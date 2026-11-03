@@ -10,7 +10,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.agenda.models import UsuarioModel
+from app.modules.agenda.models import (
+    PrestacionModel,
+    ProfesionalModel,
+    TenantModel,
+    UsuarioModel,
+)
 from app.modules.agenda.seed_demo import seed_demo, TENANT_DEMO
 
 
@@ -85,3 +90,57 @@ def test_seed_demo_no_crea_tokens_auth(session: Session) -> None:
 
     tokens = session.scalars(AuthTokenModel.__table__.select()).all()
     assert len(tokens) == 0
+
+
+def test_seed_demo_agrega_catalogo_sintetico_solo_al_tenant_demo(session: Session) -> None:
+    tenant_real = TenantModel(
+        id="tenant-real-sintetico",
+        nombre="Tenant de prueba",
+        slug="tenant-de-prueba",
+    )
+    profesional_real = ProfesionalModel(
+        id="prof-real-sintetico",
+        tenant_id=tenant_real.id,
+        nombre="Profesional existente",
+    )
+    prestacion_real = PrestacionModel(
+        id="prestacion-real-sintetica",
+        tenant_id=tenant_real.id,
+        nombre="Servicio existente",
+        duracion_min=75,
+        precio_ref=12345,
+    )
+    session.add_all([tenant_real, profesional_real, prestacion_real])
+    session.commit()
+
+    seed_demo(session)
+    seed_demo(session)
+
+    profesionales_demo = session.scalars(
+        select(ProfesionalModel).where(ProfesionalModel.tenant_id == TENANT_DEMO)
+    ).all()
+    prestaciones_demo = session.scalars(
+        select(PrestacionModel).where(PrestacionModel.tenant_id == TENANT_DEMO)
+    ).all()
+    assert len(profesionales_demo) == 1
+    assert profesionales_demo[0].id == "prof-demo-1"
+    assert profesionales_demo[0].usuario_id is None
+    assert {
+        (item.nombre, item.duracion_min)
+        for item in prestaciones_demo
+    } == {
+        ("limpieza", 30),
+        ("consulta", 20),
+        ("arreglo", 45),
+        ("conducto", 60),
+    }
+
+    profesional_real_actual = session.get(ProfesionalModel, profesional_real.id)
+    prestacion_real_actual = session.get(PrestacionModel, prestacion_real.id)
+    assert profesional_real_actual is not None
+    assert profesional_real_actual.nombre == "Profesional existente"
+    assert prestacion_real_actual is not None
+    assert (prestacion_real_actual.nombre, prestacion_real_actual.duracion_min) == (
+        "Servicio existente",
+        75,
+    )
