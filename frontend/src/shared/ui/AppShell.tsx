@@ -27,7 +27,7 @@ export function AppShell({ children }: AppShellProps): JSX.Element {
     const permiso = permisosPorRuta[enlace.to] ?? enlace.to.slice(1);
     return tienePermiso(user, permiso);
   });
-  if (location.pathname === "/login" || location.pathname === "/reset-password") return <>{children}</>;
+  if (location.pathname === "/login" || location.pathname === "/reset-password" || location.pathname.startsWith("/r/")) return <>{children}</>;
   return (
     <div className="app-shell">
       <header>

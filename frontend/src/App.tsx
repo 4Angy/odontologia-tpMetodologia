@@ -4,6 +4,7 @@ import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
 import { RequireAuth, RequirePermission } from "./features/auth/guards";
 import { AuthProvider } from "./features/auth/auth";
 import { AppShell } from "./shared/ui/AppShell";
+import { PublicBookingPage } from "./features/public/PublicBookingPage";
 import {
   AgendaPage,
   CajaPage,
@@ -16,6 +17,7 @@ import {
 export function AppRutas(): JSX.Element {
   return (
     <Routes>
+      <Route path="/r/:slug" element={<PublicBookingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>

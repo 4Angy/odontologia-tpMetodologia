@@ -12,6 +12,7 @@ from typing import Any, Callable, Mapping
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import sessionmaker
 
@@ -25,6 +26,7 @@ from app.core.errors import (
 )
 from app.core.logging import configure_logging, log_event
 from app.modules.agenda.router import router as agenda_router
+from app.modules.agenda.public_router import router as public_agenda_router
 from app.modules.auth.router import router as auth_router
 from app.modules.pacientes.router import export_router as pacientes_export_router
 from app.modules.pacientes.router import audit_router
@@ -83,6 +85,16 @@ def create_app(
         log_event(logger, logging.INFO, "servidor detenido")
 
     app = FastAPI(title="Consultorio Odontológico", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     if session_factory is not None:
         app.state.session_factory = session_factory
@@ -165,7 +177,11 @@ def create_app(
             status=exc.status_code,
             path=request.url.path,
         )
-        return JSONResponse(status_code=exc.status_code, content=cuerpo)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=cuerpo,
+            headers=dict(exc.headers or {}),
+        )
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error_handler(
@@ -201,6 +217,7 @@ def create_app(
         )
 
     app.include_router(agenda_router)
+    app.include_router(public_agenda_router)
     app.include_router(auth_router)
     app.include_router(pacientes_router)
     app.include_router(pacientes_export_router)

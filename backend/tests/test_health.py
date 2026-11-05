@@ -37,6 +37,36 @@ def test_health_no_consulta_las_dependencias():
     assert r.json()["status"] == "ok"
 
 
+def test_api_permite_cors_desde_vite_local():
+    cliente = TestClient(create_app())
+
+    r = cliente.options(
+        "/auth/password-reset",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_api_no_permite_cors_desde_origen_desconocido():
+    cliente = TestClient(create_app())
+
+    r = cliente.options(
+        "/auth/password-reset",
+        headers={
+            "Origin": "https://sitio-no-autorizado.example",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert "access-control-allow-origin" not in r.headers
+
+
 def test_ready_responde_200_cuando_todas_las_dependencias_operan():
     cliente = TestClient(create_app(probes=_todas_las_sondas_ok()))
 

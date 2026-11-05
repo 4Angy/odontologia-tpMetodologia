@@ -6,6 +6,7 @@ estado (el segundo concurrente cae en idempotencia).
 """
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 from typing import Optional
 
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.modules.agenda.models import (
     BloqueoModel,
     ConfigModel,
+    PublicTokenModel,
     PrestacionModel,
     ProfesionalModel,
     TurnoModel,
@@ -178,6 +180,7 @@ class TurnoRepository:
         stmt = stmt.order_by(TurnoModel.inicio, TurnoModel.id)
         return list(self.session.execute(stmt).scalars().all())
 
+
     def list_solapados(
         self,
         *,
@@ -222,6 +225,69 @@ class TurnoRepository:
             .order_by(TurnoModel.inicio)
         )
         return list(self.session.execute(stmt).scalars().all())
+
+
+class PublicTokenRepository:
+    """Acceso tenant-scoped a tokens públicos sin aceptar tokens crudos."""
+
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    def get_valid(
+        self,
+        *,
+        tenant_id: str,
+        raw_token: str,
+        purpose: str,
+        now: datetime,
+    ) -> Optional[PublicTokenModel]:
+        stmt = select(PublicTokenModel).where(
+            PublicTokenModel.tenant_id == tenant_id,
+            PublicTokenModel.token_hash == hashlib.sha256(
+                raw_token.encode("utf-8")
+            ).hexdigest(),
+            PublicTokenModel.purpose == purpose,
+            PublicTokenModel.revoked_at.is_(None),
+            PublicTokenModel.expires_at > now,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def get_by_raw(
+        self, *, tenant_id: str, raw_token: str, purpose: str
+    ) -> Optional[PublicTokenModel]:
+        stmt = select(PublicTokenModel).where(
+            PublicTokenModel.tenant_id == tenant_id,
+            PublicTokenModel.token_hash == hashlib.sha256(
+                raw_token.encode("utf-8")
+            ).hexdigest(),
+            PublicTokenModel.purpose == purpose,
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def list_for_turno(self, tenant_id: str, turno_id: str) -> list[PublicTokenModel]:
+        stmt = select(PublicTokenModel).where(
+            PublicTokenModel.tenant_id == tenant_id,
+            PublicTokenModel.turno_id == turno_id,
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+    def revoke_for_turno(
+        self,
+        *,
+        tenant_id: str,
+        turno_id: str,
+        revoked_at: datetime,
+        reason: str,
+    ) -> int:
+        tokens = self.list_for_turno(tenant_id, turno_id)
+        changed = 0
+        for token in tokens:
+            if token.revoked_at is None:
+                token.revoked_at = revoked_at
+                token.revocation_reason = reason
+                changed += 1
+        self.session.flush()
+        return changed
 
 
 class ConfigRepository:
