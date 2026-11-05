@@ -298,6 +298,43 @@ class TurnoModel(Base):
     )
 
 
+class PublicTokenModel(TenantMixin, Base):
+    __tablename__ = "public_token"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "token_hash",
+            "purpose",
+            name="ux_public_token_tenant_hash_purpose",
+        ),
+        Index("ix_public_token_tenant_turno", "tenant_id", "turno_id"),
+        Index("ix_public_token_expiry", "expires_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    turno_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(AwareDateTime(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        AwareDateTime(), nullable=False, default=_utc_now, server_default=text("CURRENT_TIMESTAMP")
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(AwareDateTime(), nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
+class PublicAuditModel(TenantMixin, Base):
+    __tablename__ = "public_audit"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: str(uuid.uuid4()))
+    turno_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(32), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        AwareDateTime(), nullable=False, default=_utc_now, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+
 class ConfigModel(Base):
     __tablename__ = "config"
 
@@ -313,6 +350,9 @@ class ConfigModel(Base):
     senia_requerida: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=False, server_default="false"
     )
+    public_payment_timeout_min: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=30, server_default="30"
+    )
     recordatorio_t_48h: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=True, server_default="true"
     )
@@ -323,6 +363,7 @@ class ConfigModel(Base):
     __table_args__ = (
         CheckConstraint("antelacion_cancel_hs >= 0", name="ck_config_antelacion_ge_0"),
         CheckConstraint("antelacion_reserva_hs >= 0", name="ck_config_reserva_antelacion_ge_0"),
+        CheckConstraint("public_payment_timeout_min > 0", name="ck_config_public_payment_timeout_gt_0"),
     )
 
 
@@ -335,6 +376,8 @@ __all__ = [
     "EnumArrayType",
     "HorarioProfesionalModel",
     "PrestacionModel",
+    "PublicAuditModel",
+    "PublicTokenModel",
     "ProfesionalModel",
     "TenantMixin",
     "TenantModel",
