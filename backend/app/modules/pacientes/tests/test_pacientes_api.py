@@ -175,10 +175,9 @@ def test_import_csv_y_export_pacientes(session_factory):
     session.close()
 
 
-def test_evolucion_y_presupuesto_alimentan_ficha(session_factory):
+def test_evolucion_y_presupuesto_alimentan_ficha(session_factory, session):
     app = create_app(session_factory=session_factory)
     client = TestClient(app)
-    session = session_factory()
     tenant = TenantModel(id=str(uuid.uuid4()), slug="tenant-e", nombre="Tenant E")
     session.add(tenant)
     session.flush()
@@ -196,7 +195,7 @@ def test_evolucion_y_presupuesto_alimentan_ficha(session_factory):
             activo=True,
         )
     )
-    session.flush()
+    session.commit()
 
     paciente = client.post(
         "/pacientes",
@@ -246,8 +245,6 @@ def test_evolucion_y_presupuesto_alimentan_ficha(session_factory):
     )
     assert export.status_code == 200
     assert ",40000\r\n" in export.text
-
-    session.close()
 
 
 def test_adjunto_rechaza_archivo_grande(session_factory):

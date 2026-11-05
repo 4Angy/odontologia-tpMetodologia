@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.core.security import mint_token
-from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel
+from app.modules.agenda.models import (
+    ConfigModel,
+    TenantModel,
+    TurnoModel,
+    UsuarioModel,
+    UsuarioRoles,
+)
 
 TENANT_A = "tenant-demo-a"
 AHORA = datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)
@@ -22,6 +28,11 @@ def client(session_factory):
     s.add(TenantModel(id=TENANT_A, nombre="Demo A"))
     s.flush()  # el tenant debe existir antes que su config (FK real en Postgres)
     s.add(ConfigModel(tenant_id=TENANT_A, antelacion_cancel_hs=24))
+    # El audit_event referencia actor_id -> usuario.id (FK real en Postgres).
+    s.add(UsuarioModel(
+        id="user-recep-1", tenant_id=TENANT_A, email="recep@demo.test",
+        nombre="Recepción sintética", roles=[UsuarioRoles.RECEPCION.value], activo=True,
+    ))
     s.add(TurnoModel(
         id="turno-ok", tenant_id=TENANT_A, paciente_id="pac-1",
         profesional_id="prof-1", profesional_usuario_id="user-odonto-1",

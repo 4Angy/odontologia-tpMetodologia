@@ -315,8 +315,7 @@ def test_importacion_csv_informa_filas_y_rechaza_limites(session_factory):
     session.close()
 
 
-def test_baja_logica_preserva_historia_y_eliminacion_es_auditable(session_factory):
-    session = session_factory()
+def test_baja_logica_preserva_historia_y_eliminacion_es_auditable(session_factory, session):
     tenant = _tenant(session, "c04-delete")
     owner = _token(session, tenant, "owner@delete.test", [UsuarioRoles.DUENO.value])
     client = TestClient(create_app(session_factory=session_factory))
@@ -341,7 +340,7 @@ def test_baja_logica_preserva_historia_y_eliminacion_es_auditable(session_factor
         activo=True,
     )
     session.add(professional)
-    session.flush()
+    session.commit()
     clinical = client.post(
         f"/pacientes/{patient_id}/evoluciones",
         json={
@@ -377,7 +376,6 @@ def test_baja_logica_preserva_historia_y_eliminacion_es_auditable(session_factor
         .deleted_at
         is not None
     )
-    session.close()
 
 
 def test_falla_de_auditoria_revierte_la_mutacion(session_factory, monkeypatch):

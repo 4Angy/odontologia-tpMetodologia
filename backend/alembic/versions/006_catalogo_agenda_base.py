@@ -87,14 +87,15 @@ def downgrade() -> None:
 
     if inspector.has_table("config"):
         cols = {c["name"] for c in inspector.get_columns("config")}
+        checks = {c["name"] for c in inspector.get_check_constraints("config")}
+        # La constraint depende de antelacion_reserva_hs: si se dropea la
+        # columna primero, Postgres elimina la constraint y el DROP CONSTRAINT
+        # posterior aborta la transacción. Se dropea antes, sin tragar errores.
+        if "ck_config_reserva_antelacion_ge_0" in checks:
+            op.drop_constraint("ck_config_reserva_antelacion_ge_0", "config", type_="check")
         for name in ["recordatorio_t_24h", "recordatorio_t_48h", "antelacion_reserva_hs"]:
             if name in cols:
                 op.drop_column("config", name)
-        for name in ["ck_config_reserva_antelacion_ge_0"]:
-            try:
-                op.drop_constraint(name, "config", type_="check")
-            except Exception:
-                pass
 
     if inspector.has_table("bloqueo"):
         op.drop_index("ix_bloqueo_profesional_id", table_name="bloqueo")

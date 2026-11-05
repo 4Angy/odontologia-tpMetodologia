@@ -110,7 +110,9 @@ def test_seed_demo_agrega_catalogo_sintetico_solo_al_tenant_demo(session: Sessio
         duracion_min=75,
         precio_ref=12345,
     )
-    session.add_all([tenant_real, profesional_real, prestacion_real])
+    session.add(tenant_real)
+    session.flush()
+    session.add_all([profesional_real, prestacion_real])
     session.commit()
 
     seed_demo(session)

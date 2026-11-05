@@ -234,6 +234,7 @@ def test_mutacion_de_catalogo_audita_actor_tenant_y_utc(session_factory):
         nombre="Tenant sintético ajeno",
     )
     session.add(foreign_tenant)
+    session.flush()
     session.add(
         ProfesionalModel(
             id="prof-c06-rbac-foreign",

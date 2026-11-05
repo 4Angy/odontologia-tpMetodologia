@@ -62,9 +62,13 @@ class AwareDateTime(TypeDecorator):
         return value
 
     def process_result_value(self, value, dialect):  # noqa: ANN001, ANN202
-        if value is not None and getattr(value, "tzinfo", None) is None:
+        if value is None:
+            return None
+        if getattr(value, "tzinfo", None) is None:
             return value.replace(tzinfo=timezone.utc)
-        return value
+        # Postgres devuelve timestamptz en la zona horaria del servidor. La API
+        # debe serializar siempre UTC (R7), independientemente de esa config.
+        return value.astimezone(timezone.utc)
 
 
 class UsuarioRoles(str, Enum):

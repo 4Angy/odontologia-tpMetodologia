@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import uuid
+import warnings
 from typing import Iterator
 
 import pytest
@@ -48,6 +49,18 @@ def db_engine() -> Iterator[Engine]:
             connect_args={"check_same_thread": False},
             poolclass=StaticPool,
         )
+
+        @event.listens_for(engine, "connect")
+        def _fk_sqlite(dbapi_connection, connection_record):  # noqa: ANN001, ARG001
+            # SQLite ignora las FK por defecto. Sin esto, un test puede pasar en
+            # SQLite y fallar en Postgres (donde las FK son reales). Se activa
+            # para que el atajo local detecte el mismo tipo de error.
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA foreign_keys=ON")
+            finally:
+                cursor.close()
+
         Base.metadata.create_all(engine)
         try:
             yield engine
@@ -71,10 +84,20 @@ def db_engine() -> Iterator[Engine]:
     try:
         yield engine
     finally:
-        Base.metadata.drop_all(engine)
-        with engine.begin() as conexion:
-            conexion.execute(text(f'DROP SCHEMA IF EXISTS "{esquema}" CASCADE'))
-        engine.dispose()
+        # Un test que falla puede dejar una transacción abierta. Si se espera
+        # el lock sin límite, el job de CI se cuelga hasta el timeout (6 h).
+        # El esquema es descartable: alcanza con DROP SCHEMA ... CASCADE.
+        try:
+            with engine.begin() as conexion:
+                conexion.execute(text("SET LOCAL lock_timeout = '5s'"))
+                conexion.execute(text(f'DROP SCHEMA IF EXISTS "{esquema}" CASCADE'))
+        except Exception as exc:  # noqa: BLE001
+            warnings.warn(
+                f"No se pudo limpiar el esquema de test {esquema!r}: {exc}",
+                stacklevel=1,
+            )
+        finally:
+            engine.dispose()
 
 
 @pytest.fixture()

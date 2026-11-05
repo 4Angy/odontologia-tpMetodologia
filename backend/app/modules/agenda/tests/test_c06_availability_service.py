@@ -30,8 +30,9 @@ def test_servicio_consulta_horarios_bloqueos_turnos_y_config_por_tenant(session)
         duracion_min=30,
         precio_ref=None,
     )
+    session.add(tenant)
+    session.flush()
     session.add_all([
-        tenant,
         profesional,
         prestacion,
         ConfigModel(tenant_id=tenant.id, antelacion_reserva_hs=2),
@@ -106,7 +107,9 @@ def test_servicio_no_resuelve_profesional_de_otro_tenant(session):
         duracion_min=30,
         precio_ref=None,
     )
-    session.add_all([owner, foreign, foreign_professional, prestacion])
+    session.add_all([owner, foreign])
+    session.flush()
+    session.add_all([foreign_professional, prestacion])
     session.commit()
 
     with pytest.raises(LookupError):

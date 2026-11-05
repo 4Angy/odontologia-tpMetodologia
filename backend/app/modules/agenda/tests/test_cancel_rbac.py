@@ -10,7 +10,13 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.core.security import mint_token
-from app.modules.agenda.models import ConfigModel, TenantModel, TurnoModel
+from app.modules.agenda.models import (
+    ConfigModel,
+    TenantModel,
+    TurnoModel,
+    UsuarioModel,
+    UsuarioRoles,
+)
 
 TENANT_A = "tenant-demo-a"
 TENANT_B = "tenant-demo-b"
@@ -24,6 +30,18 @@ def client(session_factory):
         s.add(TenantModel(id=t, nombre=t))
         s.flush()  # el tenant debe existir antes que su config (FK real en Postgres)
         s.add(ConfigModel(tenant_id=t, antelacion_cancel_hs=24))
+    # El audit_event referencia actor_id -> usuario.id (FK real en Postgres).
+    s.add_all([
+        UsuarioModel(
+            id="user-odonto-otro", tenant_id=TENANT_A, email="odonto-otro@demo.test",
+            nombre="Odontólogo ajeno", roles=[UsuarioRoles.ODONTOLOGO.value], activo=True,
+        ),
+        UsuarioModel(
+            id="user-multi", tenant_id=TENANT_A, email="multi@demo.test",
+            nombre="Usuario multirol",
+            roles=[UsuarioRoles.RECEPCION.value, UsuarioRoles.ODONTOLOGO.value], activo=True,
+        ),
+    ])
     s.add(TurnoModel(
         id="turno-ajeno", tenant_id=TENANT_A, paciente_id="pac-1",
         profesional_id="prof-otro", profesional_usuario_id="user-odonto-otro",
