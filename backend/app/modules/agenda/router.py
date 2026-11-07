@@ -1087,12 +1087,18 @@ def get_config(
             antelacion_reserva_hs=2,
             recordatorio_t_48h=True,
             recordatorio_t_24h=True,
+            recordatorio_1_hs=48,
+            recordatorio_2_hs=24,
+            whatsapp_costo_centavos=0,
         )
     return ConfigResponse(
         antelacion_cancel_hs=cfg.antelacion_cancel_hs,
         antelacion_reserva_hs=cfg.antelacion_reserva_hs,
         recordatorio_t_48h=cfg.recordatorio_t_48h,
         recordatorio_t_24h=cfg.recordatorio_t_24h,
+        recordatorio_1_hs=cfg.recordatorio_1_hs,
+        recordatorio_2_hs=cfg.recordatorio_2_hs,
+        whatsapp_costo_centavos=cfg.whatsapp_costo_centavos,
     )
 
 
@@ -1109,6 +1115,9 @@ def put_config(
         payload.antelacion_reserva_hs,
         payload.recordatorio_t_48h,
         payload.recordatorio_t_24h,
+        payload.recordatorio_1_hs,
+        payload.recordatorio_2_hs,
+        payload.whatsapp_costo_centavos,
     )
     cambios: list[str] = []
     for campo in (
@@ -1136,4 +1145,7 @@ def put_config(
         antelacion_reserva_hs=cfg.antelacion_reserva_hs,
         recordatorio_t_48h=cfg.recordatorio_t_48h,
         recordatorio_t_24h=cfg.recordatorio_t_24h,
+        recordatorio_1_hs=cfg.recordatorio_1_hs,
+        recordatorio_2_hs=cfg.recordatorio_2_hs,
+        whatsapp_costo_centavos=cfg.whatsapp_costo_centavos,
     )

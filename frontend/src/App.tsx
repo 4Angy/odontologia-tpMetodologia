@@ -5,6 +5,8 @@ import { RequireAuth, RequirePermission } from "./features/auth/guards";
 import { AuthProvider } from "./features/auth/auth";
 import { AppShell } from "./shared/ui/AppShell";
 import { PublicBookingPage } from "./features/public/PublicBookingPage";
+import { PublicConfirmPage } from "./features/public/PublicConfirmPage";
+import { ConsumoPage } from "./features/notificaciones/ConsumoPage";
 import {
   AgendaPage,
   CajaPage,
@@ -17,7 +19,8 @@ import {
 export function AppRutas(): JSX.Element {
   return (
     <Routes>
-      <Route path="/r/:slug" element={<PublicBookingPage />} />
+      <Route path="/r/:slug/confirmar" element={<PublicConfirmPage />} />
+  <Route path="/r/:slug" element={<PublicBookingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>
@@ -32,8 +35,11 @@ export function AppRutas(): JSX.Element {
         <Route element={<RequirePermission permiso="cobros" />}>
           <Route path="/caja" element={<CajaPage />} />
         </Route>
-        <Route element={<RequirePermission permiso="catalogo" />}>
+        <Route element={<RequirePermission permiso="configuracion" />}>
           <Route path="/config" element={<ConfigPage />} />
+        </Route>
+        <Route element={<RequirePermission permiso="notificaciones" />}>
+          <Route path="/consumo" element={<ConsumoPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

@@ -55,6 +55,7 @@ const PERMISOS_POR_ROL: Record<string, readonly string[]> = {
     "exportacion",
     "auditoria",
     "catalogo",
+    "notificaciones",
   ],
 };
 

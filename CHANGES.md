@@ -264,13 +264,13 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: condición de carrera en doble reserva del mismo hueco (mitigación: validación en app + índice + idempotency key; test de concurrencia); métrica de éxito "agenda diaria < 5 min" depende de esta UX — validar con recepcionista real en prototipo.
 
 ### [C-08] `reserva-publica-tokens`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-05) - `openspec/changes/archive/2026-11-05-reserva-publica-tokens/`
 - **Scope**: Reserva pública 24/7 por link + acciones del paciente sin login (US-002)
   - Rutas públicas (rate-limit + sin JWT): `GET /r/:tenantSlug` (página pública con disponibilidad real), `POST /public/reservar` (crea turno `pendiente_confirmacion` RN-AG-07, respeta bloqueos/duración/antelación RN-AG-06), `POST /public/turnos/:token/confirmar|cancelar|reprogramar` (token único por turno con expiración default 72h post-turno, RN-AU-03)
   - Opt-in WhatsApp capturado en la reserva (RN-PA-01); si la prestación exige seña → crea preferencia MP y devuelve `checkout_url` (contrato definido aquí, cobrado en C-12)
   - Pago no acreditado en 30 min → job libera el hueco y avisa (default configurable, Flujo 1)
   - Frontend: página pública liviana `/r/:slug` (fuera del shell autenticado), botones de WhatsApp con token
-  - Migración 010: expiración de `turno.token_publico`; índice `token_publico` (la columna y su unicidad se agregan en C-07)
+  - Migración 011: tabla `public_token` con hash, propósito, expiración y revocación; índices tenant/turno/hash (la columna `turno.token_publico` y su unicidad se agregan en C-07)
   - Tests: reserva respeta bloqueos, token expirado rechaza, rate-limit en rutas públicas, turno nace `pendiente_confirmacion`
 - **Dependencias**: C-07
 - **Governance**: ALTO (superficie pública sin auth: abuso/spam/seguridad; tokens con expiración)
@@ -289,16 +289,17 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > El corazón del valor pagable (dolor: ausentismo = plata perdida). C-09 depende de C-07 + C-08; C-10 depende de C-09.
 
 ### [C-09] `notificaciones-whatsapp-worker`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-06) — implementado, verificado y archivado. Artefactos SDD en `openspec/changes/archive/...` (o `openspec/changes/c-09-...` según archivado). 27/27 tareas completadas; `openspec validate --strict` verde; suite backend 238 passed; migración 012 up/down verificada contra PostgreSQL 16; build TS verde; `git diff --check` sin errores (salvo trailing whitespace corregido). Evidencia MCP Redis: `redis_scan tick:*` 0→1, `redis_key_info` TTL ~840 s, `redis_health` total_keys 0→1, expiración verificada (`exists:false`).
 - **Scope**: Motor de notificaciones WhatsApp + fallback email + panel de consumo (US-003 + US-012 CA-1)
-  - Modelos: `NotificacionEnvio` (paciente, turno nullable, canal, plantilla, `estado`: encolada|enviada|entregada|fallida, `costo_estimado`, `provider_msg_id`), `Plantilla` (confirmación, recordatorio, cancelación, lista de espera, seña — español-AR)
-  - Worker Redis: scheduler cada 15 min selecciona turnos en ventana T-48h/T-24h sin envío y con opt-in; máximo 1 mensaje por ventana/turno (RN-PA-03 anti-spam); confirmación con un toque por token → turno `confirmado` (RN-PA-01: sin opt-in no hay envíos, se registra el motivo)
-  - Resiliencia (RN-GL-03): proveedor caído → reintento exponencial 3 intentos → fallback email si hay (RN-PA-04) → `fallida` visible con botón reintentar; cola persistente Redis AOF; el turno igual queda confirmado aunque falle el envío
+  - Modelos: `NotificacionEnvio` (paciente, turno nullable, canal, plantilla, `estado`: encolada|enviada|entregada|fallida|omitida|cancelada, `costo_estimado_centavos`, `provider_msg_id`), `Plantilla` (confirmación, recordatorio, cancelación, lista de espera, seña — español-AR)
+  - Worker (scheduler + sender): cada 15 min selecciona turnos en ventana T-48h/T-24h sin envío y con opt-in; máximo 1 mensaje por ventana/turno (RN-PA-03 anti-spam); confirmación con un toque por token (RN-PA-01: sin opt-in no hay envíos, se registra el motivo)
+  - Resiliencia (RN-GL-03): proveedor caído → reintento exponencial 3 intentos → fallback email si hay (RN-PA-04) → `fallida` visible con botón reintentar; cola durable en `notificacion_envio` (Redis solo lock del tick y pre-chequeo); el turno igual queda confirmado aunque falle el envío
   - Endpoints: `POST /notificaciones/test`, `GET /notificaciones/consumo` (mensajes + costo estimado por período), `POST /webhooks/whatsapp` (estados + inbound idempotente por `provider_msg_id`)
   - Proveedor concreto según ADR-001 de C-01 (`WHATSAPP_PROVIDER` official|gateway)
   - Frontend: panel de consumo/costo WhatsApp visible para el dueño (US-012 CA-1)
-  - Migración 011: tablas `notificacion_envio`, `plantilla`; índices `(tenant_id, created_at)`, `(tenant_id, estado)`
+  - Migración 012: tablas `notificacion_envio`, `plantilla`; índices `(tenant_id, estado, next_attempt_at)` y `(tenant_id, created_at)`; uniques de anti-spam `(tenant, turno, ventana, canal)` e idempotencia `(tenant, provider_msg_id)`; `config.recordatorio_1_hs|recordatorio_2_hs|whatsapp_costo_centavos`; `turno.confirmado_paciente_at`
   - Tests: 1 mensaje por ventana, sin opt-in no envía, reintento + fallback, webhook duplicado idempotente, panel muestra costos
+  - Decisiones del explore (2026-11-06): cola en `notificacion_envio` con `FOR UPDATE SKIP LOCKED` (Redis solo lock del tick + pre-chequeo); idempotencia y anti-spam por constraints de Postgres; `WhatsAppClient` + fake inyectado; reutiliza el token de C-08 con página pública que hace el POST; email como fila encolada. "Confirmar" sobre un turno ya `confirmado` registra `confirmado_paciente_at` sin cambiar estado. El desvío del §Flujo 5 (Redis como cola) está justificado en `design.md` con evidencia del MCP `redis`.
 - **Dependencias**: C-07, C-08 (usa C-04 opt-ins; corre en paralelo con C-11)
 - **Governance**: ALTO (integración externa falible + costos por mensaje + anti-spam legal)
 - **Leer antes**:
@@ -316,7 +317,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Endpoints: `POST /lista-espera` (alta), `GET /lista-espera` (cola auditable), acciones aceptar/declinar por token (reutiliza mecanismo C-08)
   - Motor: al liberarse un hueco compatible → primer `activa` elegible pasa a `ofrecida` + WhatsApp con TTL default 2h; acepta → turno asignado (arrastra seña si corresponde, RN-AG-05); declina/vence → siguiente; sin opt-in → se salta con motivo registrado (RN-PA-01)
   - Frontend: vista de cola para recepción (estados auditables), botón de oferta manual
-  - Migración 012: tabla `lista_espera`; índice `(tenant_id, estado, prioridad)`
+  - Migración 013: tabla `lista_espera`; índice `(tenant_id, estado, prioridad)`
   - Tests: oferta al primero elegible, TTL vence → pasa al siguiente, aceptar asigna turno y sale de la lista, sin opt-in se salta
 - **Dependencias**: C-09 (usa el motor de envíos; corre en paralelo con C-12)
 - **Governance**: MEDIO (máquina de estados con TTL; sin dinero directo)
@@ -341,7 +342,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Endpoints: `CRUD /cobros` (alta < 30s), `GET /deudas` (ordenada por antigüedad/monto), `POST /caja/cierre-dia`, `POST /caja/ajuste` (nota auditada), `GET /caja/cierre-dia` (conciliación por medio)
   - UI honesta (RN-CO-01 + ADR-002): la pantalla declara que v1 es caja manual sin comprobantes fiscales
   - Frontend: pantalla de caja (cobro rápido, deudas, cierre del día con totales por medio)
-  - Migración 013: tablas `cobro`, `cierre_caja`; índices `(tenant_id, fecha)`, `(tenant_id, paciente_id)`
+  - Migración 014: tablas `cobro`, `cierre_caja`; índices `(tenant_id, fecha)`, `(tenant_id, paciente_id)`
   - Tests: saldo derivado automático, cierre inmutable (edición directa rechaza), ajuste deja auditoría, deudas ordenadas
 - **Dependencias**: C-04, C-07
 - **Governance**: CRITICO (dinero: inmutabilidad del cierre + saldo derivado; error aquí = pérdida de confianza del dueño)
@@ -361,7 +362,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
   - Reprogramar arrastra la seña (RN-AG-05; si el nuevo turno no requiere seña → saldo a favor); devolución parametrizable `no_devuelve|devuelve_50|devuelve_100` según antelación (RN-CO-03, default: en término → saldo a favor, fuera de término → se pierde)
   - Webhook-first con retries MP; ninguna caída de MP bloquea el flujo local (RN-GL-03)
   - Frontend: config de seña por prestación, estado de seña en el turno, aviso de arrastre al reprogramar
-  - Migración 014: tabla `senia` (+ `turno.senia_id`, si aún no existe)
+  - Migración 015: tabla `senia` (+ `turno.senia_id`, si aún no existe)
   - Tests: webhook duplicado idempotente, reprogramar arrastra (no cobra dos veces), devolución según política, sin seña acreditada no confirma (cuando es requerida)
 - **Dependencias**: C-08, C-11
 - **Governance**: CRITICO (dinero real + webhooks externos + idempotencia de pagos)
@@ -383,7 +384,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Estado**: `[ ]` pendiente
 - **Scope**: Transparencia radical + auditoría + hardening de lanzamiento (US-012 + salida a producción)
   - Transparencia (US-012, diferenciador): sección "qué no hace (aún)" con roadmap honesto (incluye odontograma v2+ y FE ARCA — gestiona R1/SU-03 en la UI), precio ARS del plan visible in-app (SU-04), panel de consumo WhatsApp por período (datos de C-09)
-  - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 015: tabla `auditoria`
+  - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 016: tabla `auditoria`
   - Hardening: rate-limit en todas las rutas públicas (C-08) + login (C-03), validación E.164/tamaños, backups Postgres diarios + cifrado en reposo del proveedor, rotación manual de secretos documentada (runbook v1), checklist de lanzamiento (métricas §01: ausentismo −30%, time-to-value < 24h, transparencia binaria)
   - Seed demo completo (tenant demo + agenda + pacientes + caja de ejemplo) y guía de onboarding en el día (alta + CSV + prueba sin tarjeta)
   - Tests: auditoría registra mutaciones, rate-limit bloquea abuso, seed demo levanta un tenant operable, checklist de lanzamiento en verde

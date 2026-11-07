@@ -18,6 +18,7 @@ from app.modules.agenda.models import (
     UsuarioModel,
     UsuarioRoles,
 )
+from app.modules.notificaciones.seed import seed_plantillas
 
 TENANT_DEMO = "tenant-demo"
 TENANT_DEMO_SLUG = "demo"
@@ -127,8 +128,8 @@ def seed_demo(session: Session, now_utc: datetime | None = None) -> dict:
             session.add(t)
         return t
 
-    _upsert_turno(TURNO_LIBRE_ID, now_utc + timedelta(hours=72))
-    _upsert_turno(TURNO_VENTANA_ID, now_utc + timedelta(hours=2))
+    session.commit()
+    seed_plantillas(session, TENANT_DEMO)
     session.commit()
     return {"tenant": TENANT_DEMO, "tenant_slug": TENANT_DEMO_SLUG, "turnos": [TURNO_LIBRE_ID, TURNO_VENTANA_ID]}
 

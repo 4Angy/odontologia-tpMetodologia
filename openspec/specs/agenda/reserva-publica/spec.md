@@ -114,12 +114,26 @@ revocation.
 The system SHALL expose confirm, cancel and reschedule actions without login
 only through a valid action token and MUST reuse the appointment state machine,
 cancellation lead-time rule and availability validation. Public actions MUST
-not permit arbitrary state updates or unauthorized overrides.
+not permit arbitrary state updates or unauthorized overrides. The confirm action
+MUST record the patient acknowledgment when the appointment is already
+`confirmado`, storing the acknowledgment instant without changing `estado`; for a
+`pendiente_confirmacion` appointment it MUST preserve the transition to
+`confirmado`.
 
 #### Scenario: Patient confirms a pending appointment
 
 - **WHEN** a valid confirmation token is used for a `pendiente_confirmacion` appointment that does not require an unpaid deposit
 - **THEN** the appointment transitions to `confirmado`
+
+#### Scenario: Patient acknowledges an already confirmed appointment
+
+- **WHEN** a valid confirmation token is used for an appointment that is already `confirmado`
+- **THEN** the system records the acknowledgment instant and leaves the appointment state unchanged
+
+#### Scenario: Repeated acknowledgment
+
+- **WHEN** the same confirmation token is used again after the acknowledgment was recorded
+- **THEN** the system responds successfully, keeps the first acknowledgment instant and creates no duplicate record
 
 #### Scenario: Cancellation outside the allowed window
 
