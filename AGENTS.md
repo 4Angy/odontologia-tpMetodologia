@@ -164,11 +164,11 @@ Aplicar TODAS las reglas duras en cada paso. Ante conflicto entre la KB y este a
 
 **Propósito:** Inspeccionar claves, colas y scheduled jobs de Redis para validar idempotencia de webhooks (R8) y estado de notificaciones (C-9).
 
-**Capacidades que se usarán:** `GET`, `SET`, `KEYS`, `LLEN`, `LRANGE`, `ZRANGE`, `INFO`.
+**Capacidades que se usarán:** `redis_health`, `redis_scan` (cursor; `KEYS` está bloqueado), `redis_key_info`, `redis_get`, `redis_command` con verbos de lectura (`GET`, `HGETALL`, `LRANGE`, `ZRANGE`, `LLEN`, `INFO`), `redis_slowlog` y `redis_advisor`. Escritura deshabilitada (`ALLOW_WRITES` sin definir).
 
 **Momento de uso:** Durante la preparación e implementación de changes que usen Redis (C-9, C-11, C-12).
 
-**Límites de acceso:** Solo base de datos de prueba (puerto 6380); nunca producción. No almacenar datos reales de pacientes (R14). No credenciales en el repo.
+**Límites de acceso:** Solo base de datos de prueba (`localhost:6379`, la instancia del compose); nunca producción. No almacenar datos reales de pacientes (R14). No credenciales en el repo.
 
 **Documentación detallada:** `docs/skills-mcp/mcp-redis-integracion.md`
 

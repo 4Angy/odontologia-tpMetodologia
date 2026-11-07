@@ -61,6 +61,9 @@ ENV_BY_FIELD: dict[str, str] = {
     "whatsapp_provider": "WHATSAPP_PROVIDER",
     "whatsapp_api_token": "WHATSAPP_API_TOKEN",
     "whatsapp_phone_id": "WHATSAPP_PHONE_ID",
+    "whatsapp_verify_token": "WHATSAPP_VERIFY_TOKEN",
+    "whatsapp_app_secret": "WHATSAPP_APP_SECRET",
+    "notificaciones_enabled": "NOTIFICACIONES_ENABLED",
     "mp_access_token": "MP_ACCESS_TOKEN",
     "mp_webhook_secret": "MP_WEBHOOK_SECRET",
     "smtp_url": "SMTP_URL",
@@ -112,6 +115,11 @@ class Settings(BaseSettings):
     whatsapp_provider: Literal["official", "gateway"] = "official"
     whatsapp_api_token: SecretStr | None = None
     whatsapp_phone_id: str | None = None
+    # C-09: verificación del webhook de Meta y firma HMAC del cuerpo crudo.
+    whatsapp_verify_token: SecretStr | None = None
+    whatsapp_app_secret: SecretStr | None = None
+    # D15: interruptor de despliegue. Apagado por defecto (modo pasivo).
+    notificaciones_enabled: bool = False
 
     # --- Mercado Pago (C-12) -----------------------------------------------
     mp_access_token: SecretStr | None = None
@@ -157,6 +165,8 @@ class Settings(BaseSettings):
         for campo in (
             "jwt_secret",
             "whatsapp_api_token",
+            "whatsapp_verify_token",
+            "whatsapp_app_secret",
             "mp_access_token",
             "mp_webhook_secret",
             "smtp_url",

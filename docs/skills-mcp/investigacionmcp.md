@@ -1,6 +1,6 @@
 # Ficha de Investigación — Servidor MCP Adicional (Parte B)
 
-**Proyecto:** SaaS multi-tenant de gestión para consultorios odontológicos (Argentina) · **Fecha:** 31/10/2026  
+**Proyecto:** SaaS multi-tenant de gestión para consultorios odontológicos (Argentina) · **Fecha:** 31/10/2026 · **Actualizado:** 06/11/2026 (configuración verificada contra `@yawlabs/redis-mcp` instalado: `REDIS_URL`, puerto 6379 y modo read-only)
 **Relación con la Parte A:** este documento es una propuesta adicional e independiente. No modifica ni reemplaza `investigacion.md` ni el servidor `filesystem` ya configurado.
 
 ---
@@ -26,9 +26,9 @@ Ambos servidores hacen **más o menos lo mismo**: exponen mediante MCP las opera
 | **Propósito** | Servidor MCP para Redis con operaciones de datos, exploración de claves (SCAN), inspección de memoria y TTL, slowlog, health check y asesor DBA. **Read-only por defecto.** | Servidor MCP para Redis con operaciones básicas de datos (`GET`, `SET`, `DEL`, `KEYS`) y control de permisos + logs de operaciones. |
 | **Capacidades disponibles** | `GET`, `SET`, `DEL`, `KEYS`, `SCAN`, `LLEN`, `LRANGE`, `ZRANGE`, `HGETALL`, `EXPIRE`, `TTL`, `INFO`, inspección de memoria, slowlog, health check, DBA advisor, soporte Valkey. | `GET`, `SET`, `DEL`, `KEYS`, operaciones de lista y conjunto, control de permisos y logs de operaciones. |
 | **Compatibilidad con el agente** | Compatible con OpenCode (MCP estándar JSON-RPC 2.0 por stdio/HTTP). | Compatible con OpenCode (MCP estándar JSON-RPC 2.0 por stdio/HTTP). |
-| **Requisitos de instalación / conexión** | `npm install -g @yawlabs/redis-mcp`. Variables `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. Puerto 6380 en dev. | `npm install -g @liangshanli/mcp-server-redis`. Variables `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. Puerto 6380 en dev. |
+| **Requisitos de instalación / conexión** | `npm install -g @yawlabs/redis-mcp`. Una sola variable, `REDIS_URL` (p. ej. `redis://localhost:6379/0`). En dev, puerto **6379**. | `npm install -g @liangshanli/mcp-server-redis`. Variables `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. En dev, puerto **6379**. |
 | **Permisos** | **Read-only por defecto** (más seguro para datos de prueba). Acotable por rol de usuario. | Control de permisos y logs de operaciones. Acotable por rol. |
-| **Credenciales** | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. |
+| **Credenciales** | `REDIS_URL` (contiene usuario y contraseña si la instancia los exige). | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`. |
 | **Posibles costos** | Gratuito, código abierto, publicado 31/10/2026. | Gratuito, código abierto, publicado 25/10/2025. |
 
 ---
@@ -60,20 +60,21 @@ Archivo externo/global (no en el repo): `~/.config/opencode/opencode.json`
 ```json
 {
   "mcp": {
-    "servers": {
-      "redis": {
-        "type": "local",
-        "command": ["node", "<ruta-absoluta-al-entry-point>/dist/index.js"],
-        "env": {
-          "REDIS_HOST": "localhost",
-          "REDIS_PORT": "6380",
-          "REDIS_PASSWORD": ""
-        }
+    "redis": {
+      "type": "local",
+      "command": ["node", "<ruta-absoluta-al-entry-point>/dist/index.js"],
+      "environment": {
+        "REDIS_URL": "redis://localhost:6379/0"
       }
     }
   }
 }
 ```
+
+> **Formato del cliente:** OpenCode anida los servidores en `mcp.<nombre>` y declara
+> el entorno en `environment`. El paquete lee **solo** `REDIS_URL`; no reconoce
+> `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD` por separado. Si la instancia pide
+> contraseña, va dentro de la URL: `redis://:password@host:6379/0`.
 
 > **Nota Windows:** usar `node` + ruta absoluta al entry point (no `npx`) para evitar que el shim de Windows parta el path con espacios (`C:\Users\Cara Palida\...`), tal como ya se documentó para el servidor anterior.
 
@@ -87,40 +88,46 @@ Debe aparecer `redis connected`.
 
 ### 4.4 Ejecutar una herramienta real
 
-Contra la base de prueba (puerto 6380 según `.env`):
+Contra la base de prueba (`localhost:6379`, la instancia del compose). Las
+herramientas se invocan por nombre; el comando crudo va por `redis_command` con el
+verbo simple y los subcomandos en `args`:
 
-```bash
-# Listar claves existentes
-redis KEYS '*'
+```text
+redis_health
+  -> 7.4.11 · standalone · total_keys 0 · AOF on · maxmemory_policy noeviction
 
-# Verificar idempotencia de un webhook MP (regla dura R8)
-redis GET mp_payment_id:test123
+redis_command({ command: "GET", args: ["mp_payment_id:test123"] })
+  -> (nil) si la clave de idempotencia no existe
 
-# Inspeccionar cola de recordatorios programados (C-9)
-redis ZRANGE recordatorios:programados 0 -1 WITHSCORES
+redis_scan({ match: "recordatorio*" })
+  -> keys: []  count: 0
 ```
+
+> `KEYS` está bloqueado a propósito; la enumeración se hace con `redis_scan`. La
+> escritura (`SET`, `DEL`, `EXPIRE`) requiere `ALLOW_WRITES=1` y no está habilitada
+> en esta integración: el servidor es read-only.
 
 ---
 
 ## 5. Información consultable o modificable, y límites para datos de prueba
 
 ### Consultable
-- Claves existentes (`KEYS`, `SCAN`).
-- Contenido de una clave (`GET`, `HGETALL`, `LRANGE`, `ZRANGE`).
-- Longitud de colas (`LLEN`).
-- TTL de claves (`TTL`).
-- Información del servidor (`INFO`: memoria, clientes conectados, eviction policy).
+- Claves existentes (`redis_scan`; `KEYS` está bloqueado).
+- Type, TTL, encoding y memoria de una clave (`redis_key_info`).
+- Contenido de una clave por tipo (`redis_get`: string, hash, list, set, zset, stream).
+- Longitud de colas (`LLEN` vía `redis_command`).
+- Información del servidor (`redis_health` / `INFO`: memoria, clientes, política de eviction, persistencia).
 - Claves de idempotencia (`mp_payment_id:<id>`, `provider_msg_id:<id>`).
 
-### Modificable (solo en prueba)
-- Crear/actualizar claves de prueba (`SET`, `SETEX` con TTL).
+### Modificable (solo en prueba, con `ALLOW_WRITES=1`)
+- Crear/actualizar claves de prueba (`SET`, `SETEX` con TTL) por `redis_command`.
 - Eliminar claves de prueba (`DEL`).
-- Siempre dentro de una transacción con `ROLLBACK` o limpieza posterior, para no dejar basura en la base de prueba.
+- **En esta integración la escritura está deshabilitada**: `ALLOW_WRITES` no está definido, así que el servidor solo lee. Habilitarla es una decisión aparte, limitada a la base de prueba, con limpieza posterior para no dejar claves sueltas.
 
 ### Límites establecidos para trabajar con datos de prueba
 1. **No datos reales de pacientes (regla dura R14):** solo claves y valores sintéticos/demo.
-2. **No credenciales en el repo:** `REDIS_PASSWORD` vive solo en `opencode.json` local o `.env`, nunca se commitea.
-3. **Sin escritura en producción:** el MCP se conecta exclusivamente a la instancia de desarrollo (`localhost:6380`).
+2. **No credenciales en el repo:** si la instancia pide contraseña, va dentro de `REDIS_URL` y ese valor vive solo en el `opencode.json` local o en el entorno; nunca se commitea.
+3. **Sin escritura en producción:** el MCP se conecta exclusivamente a la instancia de desarrollo (`localhost:6379`).
 4. **Solo lectura en archivos sensibles:** el MCP no gestiona archivos del repositorio.
 
 ---

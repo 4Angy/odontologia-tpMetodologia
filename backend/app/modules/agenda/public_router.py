@@ -127,9 +127,13 @@ def public_confirm(token: str, payload: PublicActionRequest, request: Request, s
     _check_rate(f"action:{request.client.host if request.client else 'unknown'}:{payload.tenant_slug}", 20, 60)
     try:
         turno = _service(session).action(token, "confirm", payload.tenant_slug, now)
-        turno = _service(session).confirm(turno)
+        turno = _service(session).confirm(turno, now)
         session.commit()
-        return PublicActionResponse(turno_id=turno.id, estado=turno.estado)
+        return PublicActionResponse(
+            turno_id=turno.id,
+            estado=turno.estado,
+            confirmado_paciente_at=turno.confirmado_paciente_at,
+        )
     except (LookupError, PermissionError, ValueError, AgendaError) as error:
         session.rollback()
         if isinstance(error, PermissionError):

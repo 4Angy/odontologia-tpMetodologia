@@ -32,6 +32,7 @@ from app.modules.pacientes.router import export_router as pacientes_export_route
 from app.modules.pacientes.router import audit_router
 from app.modules.pacientes.router import router as pacientes_router
 from app.modules.tenancy.router import router as tenancy_router
+from app.modules.notificaciones.router import router as notificaciones_router
 
 logger = logging.getLogger("odontologia.api")
 
@@ -223,6 +224,7 @@ def create_app(
     app.include_router(pacientes_export_router)
     app.include_router(audit_router)
     app.include_router(tenancy_router)
+    app.include_router(notificaciones_router)
     return app
 
 
