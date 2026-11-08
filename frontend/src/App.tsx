@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+﻿import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LoginPage } from "./features/auth/LoginPage";
 import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
 import { RequireAuth, RequirePermission } from "./features/auth/guards";
@@ -7,6 +7,7 @@ import { AppShell } from "./shared/ui/AppShell";
 import { PublicBookingPage } from "./features/public/PublicBookingPage";
 import { PublicConfirmPage } from "./features/public/PublicConfirmPage";
 import { ConsumoPage } from "./features/notificaciones/ConsumoPage";
+import { ListaEsperaPage } from "./features/lista-espera/ListaEsperaPage";
 import {
   AgendaPage,
   CajaPage,
@@ -15,7 +16,7 @@ import {
   PacientesPage,
 } from "./pages";
 
-/** Rutas de la aplicación. Los permisos por rol llegan con C-03. */
+/** Rutas de la aplicaciÃ³n. Los permisos por rol llegan con C-03. */
 export function AppRutas(): JSX.Element {
   return (
     <Routes>
@@ -40,6 +41,7 @@ export function AppRutas(): JSX.Element {
         </Route>
         <Route element={<RequirePermission permiso="notificaciones" />}>
           <Route path="/consumo" element={<ConsumoPage />} />
+          <Route path="/lista-espera" element={<ListaEsperaPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />
@@ -58,3 +60,6 @@ export function App(): JSX.Element {
     </AuthProvider>
   );
 }
+
+
+

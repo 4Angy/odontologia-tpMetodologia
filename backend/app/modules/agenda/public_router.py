@@ -166,6 +166,17 @@ def public_cancel(token: str, payload: PublicActionRequest, request: Request, se
             antelacion_hs=antelacion,
         )
         turno.estado, turno.cancelled_by, turno.cancelled_at, turno.motivo = result.estado, result.cancelled_by, result.cancelled_at, result.motivo
+        if result.estado == "cancelado":
+            from app.modules.lista_espera.service import Hueco, ListaEsperaService
+
+            hueco = Hueco(
+                profesional_id=turno.profesional_id,
+                inicio=turno.inicio,
+                fin=turno.fin,
+                prestacion_id=turno.prestacion_id,
+            )
+            svc_le = ListaEsperaService(session, now)
+            svc_le.ofrecer_por_hueco(turno.tenant_id, hueco, now)
         session.commit()
         return PublicActionResponse(turno_id=turno.id, estado=turno.estado)
     except (LookupError, PermissionError, ValueError, AgendaError) as error:

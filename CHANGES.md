@@ -335,7 +335,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > C-11 corre en paralelo con C-08/C-09. C-12 cierra la promesa "reserva = compromiso real" (DD-05). Alcance fijado por ADR-002 de C-01.
 
 ### [C-11] `cobros-caja-manual`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado
 - **Scope**: Caja manual + saldos/deudas + cierre diario inmutable (US-006 + US-008)
   - Modelos: `Cobro` (paciente, turno nullable, monto, medio efectivo/transferencia/mp/otro, concepto, usuario que cobró, fecha), `CierreCaja` (fecha, totales por medio, observaciones, usuario; inmutable — solo nota de ajuste auditada RN-CO-04)
   - Saldo/deuda siempre derivado (cobros − presupuestos/señas aplicadas), ningún endpoint lo edita directo (RN-CO-05)

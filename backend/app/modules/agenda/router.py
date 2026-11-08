@@ -681,6 +681,18 @@ def cancelar_turno(
     fila.cancelled_at = resultado.cancelled_at
     fila.motivo = resultado.motivo
     fila.senia_pendiente_definicion = resultado.senia_pendiente_definicion
+    # C-10: disparar oferta de lista de espera si el turno se cancelo en termino.
+    if estado_anterior != resultado.estado and resultado.estado == "cancelado":
+        from app.modules.lista_espera.service import Hueco, ListaEsperaService
+
+        hueco = Hueco(
+            profesional_id=fila.profesional_id,
+            inicio=fila.inicio,
+            fin=fila.fin,
+            prestacion_id=fila.prestacion_id,
+        )
+        svc_le = ListaEsperaService(session, now_utc)
+        svc_le.ofrecer_por_hueco(user.tenant_id, hueco, now_utc)
     if estado_anterior != resultado.estado:
         _commit_audit(
             session,

@@ -14,7 +14,9 @@ export default defineConfig({
       "/public": "http://localhost:8000",
       "/r": "http://localhost:8000",
       "/webhooks": "http://localhost:8000",
-      "/health": "http://localhost:8000",
+      "/cobros": "http://localhost:8000",
+      "/deudas": "http://localhost:8000",
+      "/caja": "http://localhost:8000",
     },
   },
   test: {

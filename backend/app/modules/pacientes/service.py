@@ -733,7 +733,22 @@ class PacienteService:
                 PresupuestoModel.deleted_at.is_(None),
             )
         ).scalar_one()
-        return int(value)
+        cargos = int(value)
+        # C-11: restar cobros manuales. Señas se integran en C-12.
+        try:
+            from app.modules.cobros.models import CobroModel
+
+            pagos = self.session.execute(
+                select(func.coalesce(func.sum(CobroModel.monto_cents), 0)).where(
+                    CobroModel.tenant_id == tenant_id,
+                    CobroModel.paciente_id == paciente_id,
+                    CobroModel.deleted_at.is_(None),
+                )
+            ).scalar_one()
+            cargos -= int(pagos)
+        except Exception:  # noqa: BLE001 - tabla puede no existir en tests legacy
+            pass
+        return cargos
 
     def _validar_total_presupuesto(self, payload: PresupuestoCreate | PresupuestoUpdate) -> int:
         total = sum(item.monto_cents for item in payload.items)

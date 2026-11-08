@@ -528,6 +528,16 @@ def release_expired_pending_payments(session: Session, now: datetime) -> int:
             action="payment_timeout",
             outcome="released",
         ))
+        from app.modules.lista_espera.service import Hueco, ListaEsperaService
+
+        hueco = Hueco(
+            profesional_id=turno.profesional_id,
+            inicio=turno.inicio,
+            fin=turno.fin,
+            prestacion_id=turno.prestacion_id,
+        )
+        svc_le = ListaEsperaService(session, now)
+        svc_le.ofrecer_por_hueco(turno.tenant_id, hueco, now)
         released += 1
     session.flush()
     return released

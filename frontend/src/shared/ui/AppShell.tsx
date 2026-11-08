@@ -9,6 +9,7 @@ export const ENLACES: ReadonlyArray<{ to: string; label: string }> = [
   { to: "/caja", label: "Caja" },
   { to: "/config", label: "Configuración" },
   { to: "/consumo", label: "Consumo" },
+  { to: "/lista-espera", label: "Lista de espera" },
 ];
 
 interface AppShellProps {
@@ -25,6 +26,7 @@ export function AppShell({ children }: AppShellProps): JSX.Element {
       "/caja": "cobros",
       "/config": "catalogo",
       "/consumo": "notificaciones",
+      "/lista-espera": "agenda",
     };
     const permiso = permisosPorRuta[enlace.to] ?? enlace.to.slice(1);
     return tienePermiso(user, permiso);

@@ -29,7 +29,7 @@ from app.modules.notificaciones.email import SmtpEmailClient
 TICK_SECONDS = 15
 
 #: Jobs registrados (C-09).
-JOBS: tuple[str, ...] = ("notificaciones.scheduler", "notificaciones.sender")
+JOBS: tuple[str, ...] = ("notificaciones.scheduler", "notificaciones.sender", "lista_espera.expiry")
 
 logger = logging.getLogger("odontologia.worker")
 
@@ -109,6 +109,12 @@ def ejecutar_tick(
         public_base_url=settings.public_base_url,
     )
     procesados = sender.ejecutar()
+
+    # C-10: vencer ofertas expiradas y avanzar.
+    from app.modules.lista_espera.service import ListaEsperaService
+
+    ListaEsperaService(session, now).vencer_y_avanzar(now)
+
     session.commit()
     return {"encolados": encolados, "procesados": len(procesados)}
 
