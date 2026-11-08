@@ -1,8 +1,9 @@
-"""Worker del backend (C-01).
+"""Worker del backend (C-01 + C-09).
 
-Esqueleto sin jobs: el motor de notificaciones y el scheduler de recordatorios
-son de C-09 (governance ALTO). Este módulo existe para que el compose del
-proyecto tenga su servicio `worker` y para que C-09 tenga dónde aterrizar.
+Ejecuta dos jobs idempotentes por tick:
+1. `notificaciones.scheduler` — si el lock del intervalo se obtiene, evalúa las
+   dos ventanas de todos los tenants con `NOTIFICACIONES_ENABLED=true`.
+2. `notificaciones.sender` — reclama hasta `N` envíos vencidos y los procesa.
 """
 from __future__ import annotations
 
@@ -10,17 +11,27 @@ import logging
 import signal
 import sys
 import time
+from datetime import datetime, timezone
+from typing import Any
+
+import sqlalchemy
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import ConfigError, get_settings
 from app.core.logging import configure_logging, log_event
+from app.modules.notificaciones.lock import TickLock, redis_key
+from app.modules.notificaciones.scheduler import SchedulerService
+from app.modules.notificaciones.sender import SenderService
+from app.modules.notificaciones.whatsapp import CloudApiClient
+from app.modules.notificaciones.email import SmtpEmailClient
 
-#: Segundos entre ticks del scheduler (C-09 usa 15 min; el esqueleto es más rápido).
+#: Segundos entre ticks del scheduler.
 TICK_SECONDS = 15
 
-logger = logging.getLogger("odontologia.worker")
+#: Jobs registrados (C-09).
+JOBS: tuple[str, ...] = ("notificaciones.scheduler", "notificaciones.sender", "lista_espera.expiry")
 
-#: Jobs registrados. C-01 no registra ninguno.
-JOBS: tuple[str, ...] = ()
+logger = logging.getLogger("odontologia.worker")
 
 
 def _conectar_redis(redis_url: str) -> object | None:
@@ -34,6 +45,78 @@ def _conectar_redis(redis_url: str) -> object | None:
     except Exception as exc:  # noqa: BLE001 - el arranque no debe depender de Redis
         log_event(logger, logging.WARNING, "redis no disponible", detalle=str(exc))
         return None
+
+
+def _session_factory_from_settings() -> sessionmaker:
+    from app import deps
+
+    return sessionmaker(bind=deps.get_engine())
+
+
+def ejecutar_tick(
+    *,
+    session: Session,
+    redis_client: object | None,
+    now: datetime | None = None,
+    whatsapp_client: Any = None,
+    email_client: Any = None,
+    enabled: bool | None = None,
+) -> dict[str, int]:
+    """Ejecuta un tick determinístico. Usado por el loop y por la evidencia del MCP."""
+    settings = get_settings()
+    now = now or datetime.now(timezone.utc)
+    if enabled is None:
+        enabled = bool(settings.notificaciones_enabled)
+    if whatsapp_client is None:
+        whatsapp_client = CloudApiClient(
+            api_token=settings.whatsapp_api_token.get_secret_value() if settings.whatsapp_api_token else None,
+            phone_id=settings.whatsapp_phone_id,
+        )
+    if email_client is None:
+        email_client = SmtpEmailClient()
+
+    # Scheduler: por tenant, con lock.
+    from app.modules.agenda.models import TenantModel
+    from app.modules.agenda.repository import ConfigRepository
+
+    tenants = list(session.execute(sqlalchemy.select(TenantModel)).scalars().all())
+    encolados = 0
+    for tenant in tenants:
+        lock = TickLock(redis_client, session)
+        if not lock.acquire(tenant.id):
+            continue
+        try:
+            cfg = ConfigRepository(session).get(tenant.id)
+            svc = SchedulerService(
+                session,
+                enabled=enabled,
+                now=now,
+                redis_client=redis_client,
+            )
+            # procesar solo este tenant
+            nuevos = svc.procesar_tenant(tenant.id, cfg, now)
+            encolados += len(nuevos)
+        except Exception:
+            lock.release(tenant.id)
+            raise
+
+    # Sender
+    sender = SenderService(
+        session,
+        whatsapp=whatsapp_client,
+        email=email_client,
+        now=now,
+        public_base_url=settings.public_base_url,
+    )
+    procesados = sender.ejecutar()
+
+    # C-10: vencer ofertas expiradas y avanzar.
+    from app.modules.lista_espera.service import ListaEsperaService
+
+    ListaEsperaService(session, now).vencer_y_avanzar(now)
+
+    session.commit()
+    return {"encolados": encolados, "procesados": len(procesados)}
 
 
 def main() -> int:
@@ -57,6 +140,8 @@ def main() -> int:
     if cliente is not None:
         log_event(logger, logging.INFO, "redis conectado")
 
+    session_factory = _session_factory_from_settings()
+
     detener = False
 
     def _parar(_signum: int, _frame: object) -> None:
@@ -68,20 +153,26 @@ def main() -> int:
 
     try:
         while not detener:
-            if JOBS:
-                log_event(logger, logging.INFO, "tick", jobs=len(JOBS))
-            else:
-                log_event(logger, logging.INFO, "tick sin jobs registrados (C-09 los agrega)")
+            try:
+                with session_factory() as session:
+                    resultado = ejecutar_tick(
+                        session=session,
+                        redis_client=cliente,
+                        enabled=settings.notificaciones_enabled,
+                    )
+                    log_event(logger, logging.INFO, "tick", jobs=len(JOBS), **resultado)
+            except Exception as exc:  # noqa: BLE001
+                log_event(logger, logging.ERROR, "tick fallido", detalle=str(exc))
             time.sleep(TICK_SECONDS)
     finally:
         if cliente is not None:
             try:
-                cliente.close()  # type: ignore[attr-defined]
-            except Exception:  # noqa: BLE001 - cierre best-effort
+                cliente.close()
+            except Exception:  # noqa: BLE001
                 pass
         log_event(logger, logging.INFO, "worker detenido")
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

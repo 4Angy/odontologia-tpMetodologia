@@ -93,7 +93,7 @@ El sistema SHALL exponer acciones explícitas para confirmar, cancelar, reprogra
 
 ### Requirement: Consultar agenda interna tenant-scoped
 
-El sistema SHALL ofrecer consultas de agenda por día y semana con filtro opcional por profesional. Las consultas MUST respetar el tenant autenticado, el período válido, la zona horaria del tenant y los permisos de lectura, y MUST ordenar los turnos por inicio.
+El sistema SHALL ofrecer consultas de agenda por día y semana con filtro opcional por profesional. Las consultas MUST respetar el tenant autenticado, el período válido, la zona horaria del tenant y los permisos de lectura, y MUST ordenar los turnos por inicio. Cada turno MUST exponer `confirmado_paciente_at` como dato de solo lectura cuando exista, sin que ninguna acción de agenda pueda escribirlo.
 
 #### Scenario: Recepción o dueño consulta agenda
 
@@ -109,6 +109,11 @@ El sistema SHALL ofrecer consultas de agenda por día y semana con filtro opcion
 
 - **WHEN** el cliente solicita datos de otro tenant o turnos de un profesional sin permiso
 - **THEN** el sistema deniega o limita la consulta sin revelar datos ajenos
+
+#### Scenario: La agenda distingue el acuse del paciente
+
+- **WHEN** recepción o dueño consulta un período que incluye un turno con `confirmado_paciente_at` registrado
+- **THEN** la respuesta indica que el paciente confirmó y el instante UTC del acuse, manteniendo el estado del turno sin cambios
 
 ### Requirement: La disponibilidad se presenta como sugerencia en la agenda interna
 

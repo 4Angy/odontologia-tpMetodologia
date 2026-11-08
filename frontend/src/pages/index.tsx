@@ -1,17 +1,9 @@
 export { PacientesPage } from "../features/pacientes/PacientesPage";
 export { ConfiguracionPage as ConfigPage } from "../features/agenda/ConfiguracionPage";
 export { AgendaPage } from "../features/agenda/AgendaPage";
+export { CajaPage } from "../features/caja/CajaPage";
 
 import { PaginaPlaceholder } from "../shared/ui/AppShell";
-
-export function CajaPage(): JSX.Element {
-  return (
-    <PaginaPlaceholder
-      titulo="Caja"
-      descripcion="Cobros, saldos, deudas y cierre del día llegan con C-11."
-    />
-  );
-}
 
 export function NotFoundPage(): JSX.Element {
   return (

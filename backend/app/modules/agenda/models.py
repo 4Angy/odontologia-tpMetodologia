@@ -296,6 +296,11 @@ class TurnoModel(Base):
     sobreturno_autorizado_por: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
+    # Acuse del paciente (C-09, D1): solo lo escribe la acción pública.
+    # Ninguna acción interna de agenda debe modificarlo.
+    confirmado_paciente_at: Mapped[datetime | None] = mapped_column(
+        AwareDateTime(), nullable=True
+    )
 
 
 class PublicTokenModel(TenantMixin, Base):
@@ -359,11 +364,32 @@ class ConfigModel(Base):
     recordatorio_t_24h: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=True, server_default="true"
     )
+    # C-09: horas configurables por ventana (D10) y tarifa estimada (D9).
+    recordatorio_1_hs: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=48, server_default="48"
+    )
+    recordatorio_2_hs: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=24, server_default="24"
+    )
+    whatsapp_costo_centavos: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=0, server_default="0"
+    )
+    lista_espera_ttl_hs: Mapped[int] = mapped_column(
+        Integer(), nullable=False, default=2, server_default="2"
+    )
 
     __table_args__ = (
         CheckConstraint("antelacion_cancel_hs >= 0", name="ck_config_antelacion_ge_0"),
         CheckConstraint("antelacion_reserva_hs >= 0", name="ck_config_reserva_antelacion_ge_0"),
         CheckConstraint("public_payment_timeout_min > 0", name="ck_config_public_payment_timeout_gt_0"),
+        CheckConstraint("recordatorio_1_hs >= 0", name="ck_config_recordatorio_1_ge_0"),
+        CheckConstraint("recordatorio_2_hs >= 0", name="ck_config_recordatorio_2_ge_0"),
+        CheckConstraint(
+            "whatsapp_costo_centavos >= 0", name="ck_config_whatsapp_costo_ge_0"
+        ),
+        CheckConstraint(
+            "lista_espera_ttl_hs >= 0", name="ck_config_lista_espera_ttl_ge_0"
+        ),
     )
 
 

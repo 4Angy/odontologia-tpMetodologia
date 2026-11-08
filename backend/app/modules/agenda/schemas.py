@@ -78,6 +78,7 @@ class TurnoAgendaResponse(Strict):
     cancelled_by: str | None = None
     cancelled_at: datetime | None = None
     motivo: str | None = None
+    confirmado_paciente_at: datetime | None = None
 
 
 class ReprogramarTurnoResponse(Strict):
@@ -166,6 +167,9 @@ class ConfigResponse(Strict):
     antelacion_reserva_hs: int = 2
     recordatorio_t_48h: bool = True
     recordatorio_t_24h: bool = True
+    recordatorio_1_hs: int = 48
+    recordatorio_2_hs: int = 24
+    whatsapp_costo_centavos: int = 0
 
 
 class ConfigUpdateRequest(Strict):
@@ -173,3 +177,6 @@ class ConfigUpdateRequest(Strict):
     antelacion_reserva_hs: int = Field(default=2, ge=0)
     recordatorio_t_48h: bool | None = None
     recordatorio_t_24h: bool | None = None
+    recordatorio_1_hs: int | None = Field(default=None, ge=0)
+    recordatorio_2_hs: int | None = Field(default=None, ge=0)
+    whatsapp_costo_centavos: int | None = Field(default=None, ge=0)

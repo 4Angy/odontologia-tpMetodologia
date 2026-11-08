@@ -24,7 +24,7 @@ from app.modules.agenda.models import (
     TurnoModel,
 )
 from app.modules.agenda.repository import PublicTokenRepository, TurnoRepository
-from app.modules.agenda.service import AgendaCancelService, User, resolver_antelacion
+from app.modules.agenda.service import AgendaCancelService, AgendaError, User, resolver_antelacion
 from app.modules.agenda.turnos_service import TurnosService
 from app.modules.pacientes.repository import PacienteRepository
 from app.modules.pacientes.models import OptInModel, PacienteModel
@@ -105,6 +105,7 @@ class PublicBookingResponse(PublicStrict):
 class PublicActionResponse(PublicStrict):
     turno_id: str
     estado: str
+    confirmado_paciente_at: datetime | None = None
 
 
 class PublicBookingService:
@@ -345,17 +346,27 @@ class PublicBookingService:
         ))
         return turno
 
-    def confirm(self, turno: TurnoModel) -> TurnoModel:
-        return TurnosService(
-            repo=TurnoRepository(self.session),
-            pacientes=PacienteRepository(self.session),
-            prestaciones=None,
-            disponibilidad=lambda **_: [],
-        ).confirmar_turno(
-            tenant_id=turno.tenant_id,
-            turno_id=turno.id,
-            user=User(id="public", tenant_id=turno.tenant_id, roles=("recepcion",)),
-        )
+    def confirm(self, turno: TurnoModel, now: datetime | None = None) -> TurnoModel:
+        if turno.estado == "pendiente_confirmacion":
+            return TurnosService(
+                repo=TurnoRepository(self.session),
+                pacientes=PacienteRepository(self.session),
+                prestaciones=None,
+                disponibilidad=lambda **_: [],
+            ).confirmar_turno(
+                tenant_id=turno.tenant_id,
+                turno_id=turno.id,
+                user=User(id="public", tenant_id=turno.tenant_id, roles=("recepcion",)),
+            )
+        if turno.estado == "confirmado":
+            if turno.confirmado_paciente_at is None and now is not None:
+                from datetime import timezone as _tz
+
+                turno.confirmado_paciente_at = (
+                    now if now.tzinfo is not None else now.replace(tzinfo=_tz.utc)
+                ).astimezone(_tz.utc)
+            return turno
+        raise AgendaError("RN-AG-08", "El estado del turno no permite esta acción.", 409)
 
     def record_rejection(
         self,
@@ -517,6 +528,16 @@ def release_expired_pending_payments(session: Session, now: datetime) -> int:
             action="payment_timeout",
             outcome="released",
         ))
+        from app.modules.lista_espera.service import Hueco, ListaEsperaService
+
+        hueco = Hueco(
+            profesional_id=turno.profesional_id,
+            inicio=turno.inicio,
+            fin=turno.fin,
+            prestacion_id=turno.prestacion_id,
+        )
+        svc_le = ListaEsperaService(session, now)
+        svc_le.ofrecer_por_hueco(turno.tenant_id, hueco, now)
         released += 1
     session.flush()
     return released

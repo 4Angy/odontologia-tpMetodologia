@@ -127,9 +127,13 @@ def public_confirm(token: str, payload: PublicActionRequest, request: Request, s
     _check_rate(f"action:{request.client.host if request.client else 'unknown'}:{payload.tenant_slug}", 20, 60)
     try:
         turno = _service(session).action(token, "confirm", payload.tenant_slug, now)
-        turno = _service(session).confirm(turno)
+        turno = _service(session).confirm(turno, now)
         session.commit()
-        return PublicActionResponse(turno_id=turno.id, estado=turno.estado)
+        return PublicActionResponse(
+            turno_id=turno.id,
+            estado=turno.estado,
+            confirmado_paciente_at=turno.confirmado_paciente_at,
+        )
     except (LookupError, PermissionError, ValueError, AgendaError) as error:
         session.rollback()
         if isinstance(error, PermissionError):
@@ -162,6 +166,17 @@ def public_cancel(token: str, payload: PublicActionRequest, request: Request, se
             antelacion_hs=antelacion,
         )
         turno.estado, turno.cancelled_by, turno.cancelled_at, turno.motivo = result.estado, result.cancelled_by, result.cancelled_at, result.motivo
+        if result.estado == "cancelado":
+            from app.modules.lista_espera.service import Hueco, ListaEsperaService
+
+            hueco = Hueco(
+                profesional_id=turno.profesional_id,
+                inicio=turno.inicio,
+                fin=turno.fin,
+                prestacion_id=turno.prestacion_id,
+            )
+            svc_le = ListaEsperaService(session, now)
+            svc_le.ofrecer_por_hueco(turno.tenant_id, hueco, now)
         session.commit()
         return PublicActionResponse(turno_id=turno.id, estado=turno.estado)
     except (LookupError, PermissionError, ValueError, AgendaError) as error:

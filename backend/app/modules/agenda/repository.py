@@ -308,6 +308,10 @@ class ConfigRepository:
         antelacion_reserva_hs: int = 2,
         recordatorio_t_48h: bool | None = None,
         recordatorio_t_24h: bool | None = None,
+        recordatorio_1_hs: int | None = None,
+        recordatorio_2_hs: int | None = None,
+        whatsapp_costo_centavos: int | None = None,
+        lista_espera_ttl_hs: int | None = None,
     ) -> ConfigModel:
         if antelacion_cancel_hs < 0:
             raise IntegrityError(
@@ -328,6 +332,14 @@ class ConfigRepository:
                 cfg.recordatorio_t_48h = recordatorio_t_48h
             if recordatorio_t_24h is not None:
                 cfg.recordatorio_t_24h = recordatorio_t_24h
+            if recordatorio_1_hs is not None:
+                cfg.recordatorio_1_hs = recordatorio_1_hs
+            if recordatorio_2_hs is not None:
+                cfg.recordatorio_2_hs = recordatorio_2_hs
+            if whatsapp_costo_centavos is not None:
+                cfg.whatsapp_costo_centavos = whatsapp_costo_centavos
+            if lista_espera_ttl_hs is not None:
+                cfg.lista_espera_ttl_hs = lista_espera_ttl_hs
             self.session.add(cfg)
         else:
             cfg.antelacion_cancel_hs = antelacion_cancel_hs
@@ -336,5 +348,13 @@ class ConfigRepository:
                 cfg.recordatorio_t_48h = recordatorio_t_48h
             if recordatorio_t_24h is not None:
                 cfg.recordatorio_t_24h = recordatorio_t_24h
+            if recordatorio_1_hs is not None:
+                cfg.recordatorio_1_hs = recordatorio_1_hs
+            if recordatorio_2_hs is not None:
+                cfg.recordatorio_2_hs = recordatorio_2_hs
+            if whatsapp_costo_centavos is not None:
+                cfg.whatsapp_costo_centavos = whatsapp_costo_centavos
+            if lista_espera_ttl_hs is not None:
+                cfg.lista_espera_ttl_hs = lista_espera_ttl_hs
         self.session.flush()
         return cfg
