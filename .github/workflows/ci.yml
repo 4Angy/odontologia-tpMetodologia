@@ -64,11 +64,21 @@ jobs:
         run: |
           python -c "import os; from sqlalchemy import create_engine, text; engine=create_engine(os.environ['DATABASE_URL']).execution_options(isolation_level='AUTOCOMMIT'); connection=engine.connect(); connection.execute(text('DROP SCHEMA public CASCADE')); connection.execute(text('CREATE SCHEMA public')); connection.close(); engine.dispose()"
 
+      - name: Head único de Alembic
+        working-directory: backend
+        run: |
+          heads=$(python -m alembic heads | wc -l)
+          if [ "$heads" -ne 1 ]; then
+            echo "ERROR: hay $heads heads en Alembic; falta una migración de merge."
+            python -m alembic heads
+            exit 1
+          fi
+
       - name: Migraciones reversibles (R6)
         working-directory: backend
         run: |
           python -m alembic upgrade head
-          python -m alembic downgrade -1
+          python -m alembic downgrade base
           python -m alembic upgrade head
 
       - name: Tests
