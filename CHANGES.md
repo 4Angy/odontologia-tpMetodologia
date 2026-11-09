@@ -355,7 +355,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: **PA-02/SU-03** (si el dueño esperaba factura electrónica, v1 defrauda aunque cumpla spec — IN-01) — mitigación: declaración honesta en UI + landing desde el día 1 y validación en demos; IN-02 contenida: este change NO implementa checkout general, solo caja manual.
 
 ### [C-12] `senias-mercadopago`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (archivado 2026-11-08)
 - **Scope**: Seña por Mercado Pago con arrastre ante reprogramación (US-007)
   - Modelo: `Senia` (turno, paciente, monto, `mp_preference_id`, `mp_payment_id` nullable, `estado`: pendiente|acreditada|devuelta|aplicada)
   - Flujo: seña configurable por tenant/prestación (monto, requerida/opcional RN-CO-02); reserva pública genera preferencia MP → `checkout_url`; `POST /webhooks/mercadopago` acredita (idempotencia por `mp_payment_id`) → turno confirmado; pago no acreditado en 30 min → se libera (contrato con C-08)
