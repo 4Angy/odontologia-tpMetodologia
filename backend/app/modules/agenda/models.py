@@ -204,6 +204,12 @@ class PrestacionModel(TenantMixin, AuditMixin, Base):
     duracion_min: Mapped[int] = mapped_column(Integer(), nullable=False, default=30)
     precio_ref: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     activa: Mapped[bool] = mapped_column(Boolean(), nullable=False, default=True, server_default="true")
+    # C-12: seña por prestación. `senia_requerida` nullable = sin override
+    # (usa el valor global de `config.senia_requerida`).
+    senia_requerida: Mapped[bool | None] = mapped_column(
+        Boolean(), nullable=True, server_default="true"
+    )
+    senia_monto_cents: Mapped[int | None] = mapped_column(Integer(), nullable=True)
 
 
 class BloqueoModel(TenantMixin, AuditMixin, Base):
@@ -377,6 +383,10 @@ class ConfigModel(Base):
     lista_espera_ttl_hs: Mapped[int] = mapped_column(
         Integer(), nullable=False, default=2, server_default="2"
     )
+    # C-12: política de devolución de seña (RN-CO-03).
+    politica_devolucion_senia: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="devuelve_100", server_default="devuelve_100"
+    )
 
     __table_args__ = (
         CheckConstraint("antelacion_cancel_hs >= 0", name="ck_config_antelacion_ge_0"),
@@ -389,6 +399,10 @@ class ConfigModel(Base):
         ),
         CheckConstraint(
             "lista_espera_ttl_hs >= 0", name="ck_config_lista_espera_ttl_ge_0"
+        ),
+        CheckConstraint(
+            "politica_devolucion_senia IN ('no_devuelve', 'devuelve_50', 'devuelve_100')",
+            name="ck_config_politica_devolucion_senia",
         ),
     )
 

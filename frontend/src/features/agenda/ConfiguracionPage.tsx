@@ -32,7 +32,22 @@ const CONFIGURACION_DEFAULT: ConfiguracionAgenda = {
   antelacion_reserva_hs: 2,
   recordatorio_t_48h: true,
   recordatorio_t_24h: true,
+  politica_devolucion_senia: "devuelve_100",
 };
+
+const POLITICAS_DEVOLUCION = [
+  { valor: "devuelve_100", etiqueta: "100% a favor del paciente" },
+  { valor: "devuelve_50", etiqueta: "50% a favor del paciente" },
+  { valor: "no_devuelve", etiqueta: "Sin devolución" },
+] as const;
+
+function formatearMontos(centavos: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+  }).format(centavos / 100);
+}
 
 const DIAS_SEMANA = [
   "Lunes",
@@ -80,6 +95,8 @@ export function ConfiguracionPage(): JSX.Element {
   const [duracion, setDuracion] = useState("30");
   const [precio, setPrecio] = useState("");
   const [prestacionActiva, setPrestacionActiva] = useState(true);
+  const [seniaRequerida, setSeniaRequerida] = useState<"global" | "si" | "no">("global");
+  const [seniaMonto, setSeniaMonto] = useState("");
   const [profesionalBloqueo, setProfesionalBloqueo] = useState("");
   const [inicioBloqueo, setInicioBloqueo] = useState("");
   const [finBloqueo, setFinBloqueo] = useState("");
@@ -106,7 +123,7 @@ export function ConfiguracionPage(): JSX.Element {
     setProfesionales(nuevosProfesionales);
     setPrestaciones(nuevasPrestaciones);
     setBloqueos(nuevosBloqueos);
-    setConfiguracion(nuevaConfiguracion);
+    setConfiguracion({ ...CONFIGURACION_DEFAULT, ...nuevaConfiguracion });
   }, [request]);
 
   useEffect(() => {
@@ -196,14 +213,20 @@ export function ConfiguracionPage(): JSX.Element {
     event.preventDefault();
     const minutos = Number(duracion);
     const centavos = precio.trim() === "" ? null : Number(precio);
+    const seniaCentavos = seniaMonto.trim() === "" ? null : Number(seniaMonto);
     if (
       nombrePrestacion.trim() === "" ||
       !Number.isInteger(minutos) ||
       minutos < 5 ||
       minutos > 240 ||
-      (centavos !== null && (!Number.isSafeInteger(centavos) || centavos < 0))
+      (centavos !== null && (!Number.isSafeInteger(centavos) || centavos < 0)) ||
+      (seniaCentavos !== null && (!Number.isSafeInteger(seniaCentavos) || seniaCentavos <= 0))
     ) {
-      setError("Ingresá nombre, duración entre 5 y 240 minutos e importe en centavos enteros.");
+      setError("Ingresá nombre, duración entre 5 y 240 minutos e importes en centavos enteros.");
+      return;
+    }
+    if (seniaCentavos !== null && seniaRequerida === "no") {
+      setError("Si la prestación no requiere seña, no necesita monto de seña.");
       return;
     }
     const id = prestacionEditando;
@@ -213,6 +236,8 @@ export function ConfiguracionPage(): JSX.Element {
         duracion_min: minutos,
         precio_ref: centavos,
         activa: prestacionActiva,
+        senia_requerida: seniaRequerida === "global" ? null : seniaRequerida === "si",
+        senia_monto_cents: seniaCentavos,
       }, id ?? undefined);
       await recargar();
       setPrestacionEditando(null);
@@ -220,6 +245,8 @@ export function ConfiguracionPage(): JSX.Element {
       setDuracion("30");
       setPrecio("");
       setPrestacionActiva(true);
+      setSeniaRequerida("global");
+      setSeniaMonto("");
     }, id === null ? "Prestación creada." : "Prestación actualizada.");
   }
 
@@ -305,6 +332,7 @@ export function ConfiguracionPage(): JSX.Element {
         antelacion_reserva_hs: reservationHours,
         recordatorio_t_48h: form.get("recordatorio_t_48h") === "on",
         recordatorio_t_24h: form.get("recordatorio_t_24h") === "on",
+        politica_devolucion_senia: configuracion.politica_devolucion_senia,
       });
       setConfiguracion(nueva);
     }, "Configuración guardada.");
@@ -409,7 +437,16 @@ export function ConfiguracionPage(): JSX.Element {
             {prestaciones.map((prestacion) => (
               <li key={prestacion.id}>
                 {prestacion.nombre} — {prestacion.duracion_min} min
-                {prestacion.precio_ref === null ? "" : ` — ${prestacion.precio_ref} centavos`}
+                {prestacion.precio_ref === null ? "" : ` — ${formatearMontos(prestacion.precio_ref)}`}
+                {prestacion.senia_monto_cents === null
+                  ? ""
+                  : ` — seña ${formatearMontos(prestacion.senia_monto_cents)}${
+                      prestacion.senia_requerida === null
+                        ? " (según config.)"
+                        : prestacion.senia_requerida
+                          ? " (requerida)"
+                          : " (sin seña)"
+                    }`}
                 {prestacion.activa ? "" : " (inactiva)"}
                 {puedeEditarCatalogo && (
                   <>
@@ -419,6 +456,18 @@ export function ConfiguracionPage(): JSX.Element {
                       setDuracion(String(prestacion.duracion_min));
                       setPrecio(prestacion.precio_ref === null ? "" : String(prestacion.precio_ref));
                       setPrestacionActiva(prestacion.activa);
+                      setSeniaRequerida(
+                        prestacion.senia_requerida === null
+                          ? "global"
+                          : prestacion.senia_requerida
+                            ? "si"
+                            : "no",
+                      );
+                      setSeniaMonto(
+                        prestacion.senia_monto_cents === null
+                          ? ""
+                          : String(prestacion.senia_monto_cents),
+                      );
                     }}>Editar</button>
                     <button type="button" disabled={guardando} onClick={() => {
                       void ejecutar(async () => {
@@ -473,6 +522,30 @@ export function ConfiguracionPage(): JSX.Element {
                 onChange={(event) => setPrestacionActiva(event.target.checked)}
               />
             </label>
+            <label>
+              Seña del turno
+              <select
+                value={seniaRequerida}
+                onChange={(event) =>
+                  setSeniaRequerida(event.target.value as "global" | "si" | "no")
+                }
+              >
+                <option value="global">Según configuración global</option>
+                <option value="si">Requerida para esta prestación</option>
+                <option value="no">No requiere seña</option>
+              </select>
+            </label>
+            <label>
+              Monto de la seña (centavos)
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={seniaMonto}
+                onChange={(event) => setSeniaMonto(event.target.value)}
+                disabled={seniaRequerida === "no"}
+              />
+            </label>
             <button type="submit" disabled={guardando}>
               {prestacionEditando === null ? "Guardar prestación" : "Actualizar prestación"}
             </button>
@@ -483,6 +556,8 @@ export function ConfiguracionPage(): JSX.Element {
                 setDuracion("30");
                 setPrecio("");
                 setPrestacionActiva(true);
+                setSeniaRequerida("global");
+                setSeniaMonto("");
               }}>Cancelar edición</button>
             )}
           </form>
@@ -693,6 +768,25 @@ export function ConfiguracionPage(): JSX.Element {
                   recordatorio_t_24h: event.target.checked,
                 }))}
               />
+            </label>
+            <label>
+              Política de devolución de seña
+              <select
+                value={configuracion.politica_devolucion_senia}
+                onChange={(event) =>
+                  setConfiguracion((actual) => ({
+                    ...actual,
+                    politica_devolucion_senia: event.target
+                      .value as ConfiguracionAgenda["politica_devolucion_senia"],
+                  }))
+                }
+              >
+                {POLITICAS_DEVOLUCION.map((politica) => (
+                  <option key={politica.valor} value={politica.valor}>
+                    {politica.etiqueta}
+                  </option>
+                ))}
+              </select>
             </label>
             <p>La antelación de cancelación es global y no puede configurarse por prestación.</p>
             <button type="submit" disabled={guardando}>Guardar configuración</button>

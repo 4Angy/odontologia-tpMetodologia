@@ -32,6 +32,7 @@ from app.modules.pacientes.router import export_router as pacientes_export_route
 from app.modules.pacientes.router import audit_router
 from app.modules.pacientes.router import router as pacientes_router
 from app.modules.cobros.router import router as cobros_router
+from app.modules.cobros.webhook import router as mp_webhook_router
 from app.modules.tenancy.router import router as tenancy_router
 from app.modules.notificaciones.router import router as notificaciones_router
 from app.modules.lista_espera.router import router as lista_espera_router
@@ -227,6 +228,7 @@ def create_app(
     app.include_router(audit_router)
     app.include_router(tenancy_router)
     app.include_router(cobros_router)
+    app.include_router(mp_webhook_router)
     app.include_router(notificaciones_router)
     app.include_router(lista_espera_router)
     return app

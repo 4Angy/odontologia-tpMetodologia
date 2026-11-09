@@ -312,6 +312,7 @@ class ConfigRepository:
         recordatorio_2_hs: int | None = None,
         whatsapp_costo_centavos: int | None = None,
         lista_espera_ttl_hs: int | None = None,
+        politica_devolucion_senia: str | None = None,
     ) -> ConfigModel:
         if antelacion_cancel_hs < 0:
             raise IntegrityError(
@@ -340,6 +341,8 @@ class ConfigRepository:
                 cfg.whatsapp_costo_centavos = whatsapp_costo_centavos
             if lista_espera_ttl_hs is not None:
                 cfg.lista_espera_ttl_hs = lista_espera_ttl_hs
+            if politica_devolucion_senia is not None:
+                cfg.politica_devolucion_senia = politica_devolucion_senia
             self.session.add(cfg)
         else:
             cfg.antelacion_cancel_hs = antelacion_cancel_hs
@@ -356,5 +359,7 @@ class ConfigRepository:
                 cfg.whatsapp_costo_centavos = whatsapp_costo_centavos
             if lista_espera_ttl_hs is not None:
                 cfg.lista_espera_ttl_hs = lista_espera_ttl_hs
+            if politica_devolucion_senia is not None:
+                cfg.politica_devolucion_senia = politica_devolucion_senia
         self.session.flush()
         return cfg

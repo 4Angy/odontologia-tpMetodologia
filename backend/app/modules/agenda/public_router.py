@@ -166,6 +166,11 @@ def public_cancel(token: str, payload: PublicActionRequest, request: Request, se
             antelacion_hs=antelacion,
         )
         turno.estado, turno.cancelled_by, turno.cancelled_at, turno.motivo = result.estado, result.cancelled_by, result.cancelled_at, result.motivo
+        # C-12 / RN-CO-03: devolución de la seña según política configurada.
+        if result.estado == "cancelado" and turno.senia_id:
+            from app.modules.cobros.senias_service import SeniaService
+
+            SeniaService(session).aplicar_politica_cancelacion(turno)
         if result.estado == "cancelado":
             from app.modules.lista_espera.service import Hueco, ListaEsperaService
 

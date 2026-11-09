@@ -26,6 +26,7 @@ from app.modules.agenda.models import (
 from app.modules.agenda.repository import PublicTokenRepository, TurnoRepository
 from app.modules.agenda.service import AgendaCancelService, AgendaError, User, resolver_antelacion
 from app.modules.agenda.turnos_service import TurnosService
+from app.modules.cobros.senias_service import SeniaService
 from app.modules.pacientes.repository import PacienteRepository
 from app.modules.pacientes.models import OptInModel, PacienteModel
 
@@ -156,12 +157,20 @@ class PublicBookingService:
                 PrestacionModel.activa.is_(True),
             ).order_by(PrestacionModel.nombre)
         ).scalars().all()
+        senias = SeniaService(self.session)
         return PublicAvailabilityResponse(
             tenant_slug=tenant.slug,
             tenant_name=tenant.nombre,
             professionals=[{"id": item.id, "nombre": item.nombre} for item in professionals],
             services=[
-                {"id": item.id, "nombre": item.nombre, "duracion_min": item.duracion_min}
+                {
+                    "id": item.id,
+                    "nombre": item.nombre,
+                    "duracion_min": item.duracion_min,
+                    # C-12: el front público muestra si la reserva exige seña.
+                    "senia_requerida": senias.senia_requerida_para(tenant.id, item),
+                    "senia_monto_cents": item.senia_monto_cents,
+                }
                 for item in services
             ],
             slots=slots,
@@ -204,7 +213,12 @@ class PublicBookingService:
         if existing is not None:
             if existing.motivo != f"public:{fingerprint}":
                 raise ValueError("La clave idempotente ya fue utilizada con otros datos.")
-            return self._response(existing, now, issue_tokens=False)
+            return self._response(
+                existing,
+                now,
+                issue_tokens=False,
+                checkout_url=self._checkout_replay(existing),
+            )
         self.session.execute(
             select(ProfesionalModel).where(
                 ProfesionalModel.tenant_id == tenant.id,
@@ -289,7 +303,8 @@ class PublicBookingService:
                 optin.estado = True
                 optin.updated_at = now
         config = self.session.get(ConfigModel, tenant.id)
-        payment_required = bool(config and config.senia_requerida)
+        senias = SeniaService(self.session)
+        requiere_senia = senias.senia_requerida_para(tenant.id, prestacion)
         turno = TurnoModel(
             id=str(uuid.uuid4()),
             tenant_id=tenant.id,
@@ -303,17 +318,27 @@ class PublicBookingService:
             origen="reserva_publica",
             idempotency_key=idempotency_key,
             motivo=f"public:{fingerprint}",
-            senia_pendiente_definicion=payment_required,
+            senia_pendiente_definicion=requiere_senia,
         )
         self.session.add(turno)
         self.session.flush()
+        # C-12 (D1/D6): seña MP por prestación + preferencia → checkout_url.
+        senia, checkout_url = senias.crear_para_booking(
+            tenant_id=tenant.id,
+            turno=turno,
+            prestacion=prestacion,
+            paciente_id=paciente.id,
+            ahora=now,
+        )
+        if senia is not None:
+            turno.senia_pendiente_definicion = True
         self.session.add(PublicAuditModel(
             tenant_id=tenant.id,
             turno_id=turno.id,
             action="reserva",
             outcome="creada",
         ))
-        return self._response(turno, now, payment_required=payment_required)
+        return self._response(turno, now, checkout_url=checkout_url)
 
     def action(self, raw_token: str, purpose: str, slug: str, now: datetime) -> TurnoModel:
         if purpose not in PURPOSES:
@@ -446,20 +471,48 @@ class PublicBookingService:
         )
         self.session.add(nuevo)
         self.session.flush()
+        # C-12 (D4): arrastre de la seña acreditada al nuevo turno; si el
+        # nuevo no requiere seña, queda como saldo a favor del paciente.
+        SeniaService(self.session).arrastrar(
+            turno_viejo=turno,
+            turno_nuevo=nuevo,
+            prestacion_nueva=prestacion,
+        )
         self.session.add(PublicAuditModel(
             tenant_id=turno.tenant_id,
             turno_id=nuevo.id,
             action="reprogramar",
             outcome="creada",
         ))
-        return self._response(nuevo, now)
+        checkout_url: str | None = None
+        if nuevo.senia_id:
+            checkout_url = self._checkout_replay(nuevo)
+        return self._response(nuevo, now, checkout_url=checkout_url)
+
+    def _checkout_replay(self, turno: TurnoModel) -> str | None:
+        """Recupera el `init_point` de la preferencia para reintentos."""
+        if turno.senia_id is None:
+            return None
+        senias = SeniaService(self.session)
+        senia = senias.get(turno.tenant_id, turno.senia_id)
+        if senia is None or senia.estado != "pendiente":
+            return None
+        if senias.mp is None:
+            return ""
+        try:
+            preferencia = senias.mp.obtener_preferencia(
+                preference_id=senia.mp_preference_id
+            )
+        except Exception:  # noqa: BLE001 — RN-GL-03
+            return ""
+        return preferencia.get("init_point") or ""
 
     def _response(
         self,
         turno: TurnoModel,
         now: datetime,
-        payment_required: bool = False,
         issue_tokens: bool = True,
+        checkout_url: str | None = None,
     ) -> PublicBookingResponse:
         tokens: dict[str, str] = {}
         if issue_tokens:
@@ -477,7 +530,7 @@ class PublicBookingService:
             turno_id=turno.id,
             estado=turno.estado,
             action_tokens=tokens,
-            checkout_url=None if not payment_required else "",
+            checkout_url=checkout_url,
         )
 
 
@@ -516,6 +569,8 @@ def release_expired_pending_payments(session: Session, now: datetime) -> int:
         turno.cancelled_at = now
         turno.cancelled_by = "payment_timeout"
         turno.motivo = "Seña no acreditada dentro del plazo"
+        # C-12: la seña pendiente queda `devuelta` sin crédito (no se pagó).
+        SeniaService(session).marcar_timeout(turno)
         PublicTokenRepository(session).revoke_for_turno(
             tenant_id=turno.tenant_id,
             turno_id=turno.id,

@@ -170,6 +170,18 @@ class TurnosService:
             origen="mostrador",
             sobreturno=False,
         )
+        # C-12 (D4): arrastre de la seña acreditada; si la prestación nueva no
+        # requiere seña, la seña queda como saldo a favor del paciente.
+        # Fakes sin `repo.session` (contratos de C-07) conservan el legado.
+        repo_session = getattr(self.repo, "session", None)
+        if repo_session is not None:
+            from app.modules.cobros.senias_service import SeniaService
+
+            SeniaService(repo_session).arrastrar(
+                turno_viejo=turno,
+                turno_nuevo=nuevo_turno,
+                prestacion_nueva=prestacion if prestacion_id is not None else None,
+            )
         return turno, self.repo.create(nuevo_turno)
 
     def crear_turno(
