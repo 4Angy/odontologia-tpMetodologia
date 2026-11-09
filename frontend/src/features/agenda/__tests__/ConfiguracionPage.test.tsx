@@ -269,7 +269,7 @@ describe("catálogo y configuración de agenda", () => {
         }),
       }),
     ));
-    expect(await screen.findByText(/seña 5000 centavos \(requerida\)/i)).toBeInTheDocument();
+    expect(await screen.findByText(/seña \$\s?50,00 \(requerida\)/i)).toBeInTheDocument();
   });
 
   it("descarta el monto de seña cuando la prestación no requiere seña", async () => {
