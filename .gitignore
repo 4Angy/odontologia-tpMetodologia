@@ -17,3 +17,6 @@ __pycache__/
 
 # Logs
 *.log
+
+# Bases SQLite locales de desarrollo/tests
+backend/*.db
