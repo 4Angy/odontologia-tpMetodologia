@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.rate_limit import InMemoryRateLimiter, RateLimiter
+from app.core.rate_limit import InMemoryRateLimiter, RateLimiter, get_rate_limiter
 from app.modules.agenda.availability import candidatos_disponibles
 from app.modules.agenda.models import (
     ConfigModel,
@@ -602,7 +602,7 @@ def _hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-PUBLIC_RATE_LIMITER = InMemoryRateLimiter()
+PUBLIC_RATE_LIMITER = get_rate_limiter()
 
 
 def _fingerprint(request: PublicBookingRequest) -> str:

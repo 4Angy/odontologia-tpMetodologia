@@ -128,6 +128,59 @@ def seed_demo(session: Session, now_utc: datetime | None = None) -> dict:
             session.add(t)
         return t
 
+    # Paciente demo (R14: datos sintéticos)
+    from app.modules.pacientes.models import PacienteModel
+
+    paciente_demo_id = "pac-demo-1"
+    paciente = session.get(PacienteModel, paciente_demo_id)
+    if paciente is None or paciente.tenant_id != TENANT_DEMO:
+        if paciente is None:
+            session.add(
+                PacienteModel(
+                    id=paciente_demo_id,
+                    tenant_id=TENANT_DEMO,
+                    nombre="Paciente",
+                    apellido="Demo",
+                    telefono="+5491112345678",
+                    dni="12345678",
+                    email="paciente@demo.com",
+                )
+            )
+
+    # Cobro y cierre de caja de ejemplo
+    from app.modules.cobros.models import CobroModel, CierreCajaModel
+    from datetime import timedelta
+
+    cobro_demo_id = "cobro-demo-1"
+    cobro = session.get(CobroModel, cobro_demo_id)
+    if cobro is None:
+        session.add(
+            CobroModel(
+                id=cobro_demo_id,
+                tenant_id=TENANT_DEMO,
+                paciente_id=paciente_demo_id,
+                monto_cents=50000,
+                medio="efectivo",
+                concepto="Consulta de ejemplo",
+                usuario_id="usuario-demo-dueno",
+                fecha=now_utc,
+            )
+        )
+
+    cierre_demo_id = "cierre-demo-1"
+    cierre = session.get(CierreCajaModel, cierre_demo_id)
+    if cierre is None:
+        session.add(
+            CierreCajaModel(
+                id=cierre_demo_id,
+                tenant_id=TENANT_DEMO,
+                usuario_id="usuario-demo-dueno",
+                fecha=now_utc,
+                total_efectivo_cents=50000,
+                observaciones="Cierre de ejemplo del seed demo",
+            )
+        )
+
     session.commit()
     seed_plantillas(session, TENANT_DEMO)
     session.commit()

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from app import deps
-from app.core.rate_limit import InMemoryRateLimiter
+from app.core.rate_limit import get_rate_limiter
 from app.core.security import AuthUser, require_auth
 from app.modules.auth.schemas import (
     LoginRequest,
@@ -26,8 +26,8 @@ from app.modules.auth.service import AuthService
 
 router = APIRouter()
 
-#: Rate limiter in-memory (singleton para toda la app)
-_rate_limiter = InMemoryRateLimiter()
+#: Rate limiter (Redis en dev/prod, in-memory en tests)
+_rate_limiter = get_rate_limiter()
 
 #: Nombre de la cookie de refresh (path acotado al endpoint que la usa).
 COOKIE_REFRESH = "refresh_token"

@@ -28,8 +28,8 @@ from app.core.logging import configure_logging, log_event
 from app.modules.agenda.router import router as agenda_router
 from app.modules.agenda.public_router import router as public_agenda_router
 from app.modules.auth.router import router as auth_router
+from app.core.audit_router import audit_router
 from app.modules.pacientes.router import export_router as pacientes_export_router
-from app.modules.pacientes.router import audit_router
 from app.modules.pacientes.router import router as pacientes_router
 from app.modules.cobros.router import router as cobros_router
 from app.modules.cobros.webhook import router as mp_webhook_router
@@ -85,6 +85,17 @@ def create_app(
             service=SERVICE_NAME,
             version=SERVICE_VERSION,
         )
+        if settings.seed_demo:
+            try:
+                from app.modules.agenda.seed_demo import seed_demo
+
+                factory = getattr(app.state, "session_factory", None)
+                if factory is not None:
+                    with factory() as session:
+                        seed_demo(session)
+                log_event(logger, logging.INFO, "seed demo ejecutado")
+            except Exception as exc:  # noqa: BLE001
+                log_event(logger, logging.ERROR, "seed demo falló", detalle=str(exc))
         yield
         log_event(logger, logging.INFO, "servidor detenido")
 
@@ -99,6 +110,15 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+        response = await call_next(request)
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        return response
 
     if session_factory is not None:
         app.state.session_factory = session_factory

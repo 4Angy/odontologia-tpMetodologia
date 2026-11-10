@@ -8,6 +8,7 @@ import { PublicBookingPage } from "./features/public/PublicBookingPage";
 import { PublicConfirmPage } from "./features/public/PublicConfirmPage";
 import { ConsumoPage } from "./features/notificaciones/ConsumoPage";
 import { ListaEsperaPage } from "./features/lista-espera/ListaEsperaPage";
+import { TransparenciaPage } from "./features/transparencia/TransparenciaPage";
 import {
   AgendaPage,
   CajaPage,
@@ -42,6 +43,9 @@ export function AppRutas(): JSX.Element {
         <Route element={<RequirePermission permiso="notificaciones" />}>
           <Route path="/consumo" element={<ConsumoPage />} />
           <Route path="/lista-espera" element={<ListaEsperaPage />} />
+        </Route>
+        <Route element={<RequirePermission permiso="configuracion" />}>
+          <Route path="/transparencia" element={<TransparenciaPage />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

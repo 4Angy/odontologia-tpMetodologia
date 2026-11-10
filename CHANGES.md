@@ -381,7 +381,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > Solo arranca con C-05 + C-10 + C-12 archivados. Es el gate de salida a producción.
 
 ### [C-13] `shell-transparencia-hardening`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-09) — `openspec/changes/archive/2026-11-09-c-13-shell-transparencia-hardening/`
 - **Scope**: Transparencia radical + auditoría + hardening de lanzamiento (US-012 + salida a producción)
   - Transparencia (US-012, diferenciador): sección "qué no hace (aún)" con roadmap honesto (incluye odontograma v2+ y FE ARCA — gestiona R1/SU-03 en la UI), precio ARS del plan visible in-app (SU-04), panel de consumo WhatsApp por período (datos de C-09)
   - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 016: tabla `auditoria`

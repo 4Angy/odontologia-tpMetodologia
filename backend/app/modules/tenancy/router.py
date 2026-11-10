@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import deps
+from app.core.audit import registrar_auditoria
 from app.core.logging import log_event
 from app.core.security import AuthUser, require_roles
 from app.modules.agenda.models import UsuarioModel, UsuarioRoles
@@ -65,6 +66,17 @@ def invite_user(
         activo=True,
     )
     session.add(nuevo_usuario)
+    session.flush()
+    registrar_auditoria(
+        session,
+        tenant_id=user.tenant_id,
+        actor_id=user.id,
+        accion="usuario.invitado",
+        recurso="usuario",
+        recurso_id=nuevo_usuario.id,
+        campos=["email", "nombre", "roles"],
+        rol_activo="dueno",
+    )
     session.commit()
     session.refresh(nuevo_usuario)
 

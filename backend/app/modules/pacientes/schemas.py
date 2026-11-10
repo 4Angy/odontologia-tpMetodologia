@@ -77,6 +77,7 @@ class AuditoriaResponse(Strict):
     recurso_id: str
     campos: list[str]
     consentimiento_version: str | None = None
+    rol_activo: str | None = None
     ocurrido_at: datetime
 
 
