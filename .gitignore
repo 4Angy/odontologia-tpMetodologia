@@ -20,3 +20,6 @@ __pycache__/
 
 # Bases SQLite locales de desarrollo/tests
 backend/*.db
+
+# Resultados de corridas de pruebas locales
+scripts/*_resultado.json
