@@ -12,13 +12,14 @@ Uso: python scripts/e2e_integracion.py
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from dataclasses import dataclass, field
 
 from playwright.sync_api import sync_playwright
 
-BASE = "http://localhost:5173"
+BASE = os.environ.get("E2E_BASE", "http://localhost:5173")
 API = "http://localhost:8000"
 
 
@@ -66,10 +67,11 @@ def main() -> int:
         def on_response(resp):
             try:
                 url = resp.url
-                if ":5173" in url and not any(x in url for x in ("/@", ".tsx", ".ts?", "node_modules")):
+                origin = BASE.split("://", 1)[-1].split("/")[0]
+                if origin in url and not any(x in url for x in ("/@", ".tsx", ".ts?", "node_modules", "/assets/")):
                     timing = resp.request.timing
                     ms = timing["responseEnd"] if timing and timing.get("responseEnd", -1) >= 0 else 0
-                    key = url.split(":5173")[-1].split("?")[0]
+                    key = url.split(origin, 1)[-1].split("?")[0]
                     rep.api_timings.setdefault(key, []).append(ms)
             except Exception:
                 pass
