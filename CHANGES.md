@@ -355,7 +355,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: **PA-02/SU-03** (si el dueño esperaba factura electrónica, v1 defrauda aunque cumpla spec — IN-01) — mitigación: declaración honesta en UI + landing desde el día 1 y validación en demos; IN-02 contenida: este change NO implementa checkout general, solo caja manual.
 
 ### [C-12] `senias-mercadopago`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` completado (archivado 2026-11-08)
 - **Scope**: Seña por Mercado Pago con arrastre ante reprogramación (US-007)
   - Modelo: `Senia` (turno, paciente, monto, `mp_preference_id`, `mp_payment_id` nullable, `estado`: pendiente|acreditada|devuelta|aplicada)
   - Flujo: seña configurable por tenant/prestación (monto, requerida/opcional RN-CO-02); reserva pública genera preferencia MP → `checkout_url`; `POST /webhooks/mercadopago` acredita (idempotencia por `mp_payment_id`) → turno confirmado; pago no acreditado en 30 min → se libera (contrato con C-08)
@@ -381,7 +381,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 > Solo arranca con C-05 + C-10 + C-12 archivados. Es el gate de salida a producción.
 
 ### [C-13] `shell-transparencia-hardening`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-09) — `openspec/changes/archive/2026-11-09-c-13-shell-transparencia-hardening/`
 - **Scope**: Transparencia radical + auditoría + hardening de lanzamiento (US-012 + salida a producción)
   - Transparencia (US-012, diferenciador): sección "qué no hace (aún)" con roadmap honesto (incluye odontograma v2+ y FE ARCA — gestiona R1/SU-03 en la UI), precio ARS del plan visible in-app (SU-04), panel de consumo WhatsApp por período (datos de C-09)
   - Auditoría (RN-GL-02): middleware que registra quién/cuándo/qué en toda mutación + vista consultable por el dueño (incluye rol activo por acción, DD-06); Migración 016: tabla `auditoria`

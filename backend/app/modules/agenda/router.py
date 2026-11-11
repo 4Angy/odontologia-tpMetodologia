@@ -110,6 +110,8 @@ def _as_prestacion_response(item: PrestacionModel) -> PrestacionResponse:
         duracion_min=item.duracion_min,
         precio_ref=item.precio_ref,
         activa=item.activa,
+        senia_requerida=item.senia_requerida,
+        senia_monto_cents=item.senia_monto_cents,
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -681,6 +683,11 @@ def cancelar_turno(
     fila.cancelled_at = resultado.cancelled_at
     fila.motivo = resultado.motivo
     fila.senia_pendiente_definicion = resultado.senia_pendiente_definicion
+    # C-12 / RN-CO-03: devolución de la seña según política configurada.
+    if estado_anterior != resultado.estado and fila.senia_id:
+        from app.modules.cobros.senias_service import SeniaService
+
+        SeniaService(session).aplicar_politica_cancelacion(fila)
     # C-10: disparar oferta de lista de espera si el turno se cancelo en termino.
     if estado_anterior != resultado.estado and resultado.estado == "cancelado":
         from app.modules.lista_espera.service import Hueco, ListaEsperaService
@@ -902,6 +909,8 @@ def crear_prestacion(
         duracion_min=payload.duracion_min,
         precio_ref=payload.precio_ref,
         activa=payload.activa,
+        senia_requerida=payload.senia_requerida,
+        senia_monto_cents=payload.senia_monto_cents,
     )
     PrestacionRepository(session).create(item)
     _commit_audit(
@@ -910,7 +919,7 @@ def crear_prestacion(
         accion="agenda.prestacion.creada",
         recurso="prestacion",
         recurso_id=item.id,
-        campos=["nombre", "duracion_min", "precio_ref", "activa"],
+        campos=["nombre", "duracion_min", "precio_ref", "activa", "senia_requerida", "senia_monto_cents"],
     )
     return _as_prestacion_response(item)
 
@@ -943,6 +952,8 @@ def actualizar_prestacion(
         "duracion_min": payload.duracion_min,
         "precio_ref": payload.precio_ref,
         "activa": payload.activa,
+        "senia_requerida": payload.senia_requerida,
+        "senia_monto_cents": payload.senia_monto_cents,
     }
     for campo, valor in valores.items():
         if getattr(item, campo) != valor:
@@ -1102,6 +1113,7 @@ def get_config(
             recordatorio_1_hs=48,
             recordatorio_2_hs=24,
             whatsapp_costo_centavos=0,
+            politica_devolucion_senia="devuelve_100",
         )
     return ConfigResponse(
         antelacion_cancel_hs=cfg.antelacion_cancel_hs,
@@ -1111,6 +1123,7 @@ def get_config(
         recordatorio_1_hs=cfg.recordatorio_1_hs,
         recordatorio_2_hs=cfg.recordatorio_2_hs,
         whatsapp_costo_centavos=cfg.whatsapp_costo_centavos,
+        politica_devolucion_senia=cfg.politica_devolucion_senia,
     )
 
 
@@ -1130,6 +1143,7 @@ def put_config(
         payload.recordatorio_1_hs,
         payload.recordatorio_2_hs,
         payload.whatsapp_costo_centavos,
+        politica_devolucion_senia=payload.politica_devolucion_senia,
     )
     cambios: list[str] = []
     for campo in (
@@ -1160,4 +1174,5 @@ def put_config(
         recordatorio_1_hs=cfg.recordatorio_1_hs,
         recordatorio_2_hs=cfg.recordatorio_2_hs,
         whatsapp_costo_centavos=cfg.whatsapp_costo_centavos,
+        politica_devolucion_senia=cfg.politica_devolucion_senia,
     )

@@ -10,6 +10,7 @@ export const ENLACES: ReadonlyArray<{ to: string; label: string }> = [
   { to: "/config", label: "Configuración" },
   { to: "/consumo", label: "Consumo" },
   { to: "/lista-espera", label: "Lista de espera" },
+  { to: "/transparencia", label: "Transparencia" },
 ];
 
 interface AppShellProps {
@@ -20,13 +21,16 @@ export function AppShell({ children }: AppShellProps): JSX.Element {
   const { user, logout } = useAuth();
   const location = useLocation();
   const visibles = ENLACES.filter((enlace) => {
+    // Debe coincidir con los RequirePermission de App.tsx: si difieren, el
+    // shell muestra enlaces que la ruta rechaza (o esconde válidos).
     const permisosPorRuta: Record<string, string> = {
       "/agenda": "agenda",
       "/pacientes": "pacientes",
       "/caja": "cobros",
-      "/config": "catalogo",
+      "/config": "configuracion",
       "/consumo": "notificaciones",
-      "/lista-espera": "agenda",
+      "/lista-espera": "notificaciones",
+      "/transparencia": "configuracion",
     };
     const permiso = permisosPorRuta[enlace.to] ?? enlace.to.slice(1);
     return tienePermiso(user, permiso);

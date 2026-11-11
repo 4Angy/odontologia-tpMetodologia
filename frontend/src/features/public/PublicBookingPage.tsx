@@ -24,6 +24,10 @@ export function PublicBookingPage(): JSX.Element {
   const [message, setMessage] = useState("Elegí un profesional y una prestación.");
   const [loading, setLoading] = useState(false);
   const [actionResult, setActionResult] = useState("");
+  const [checkoutUrl, setCheckout] = useState("");
+
+  const prestacionSeleccionada = data?.services.find((item) => item.id === serviceId) ?? null;
+  const requiereSena = prestacionSeleccionada?.senia_requerida === true;
 
   const range = useMemo(() => {
     const now = new Date();
@@ -73,7 +77,12 @@ export function PublicBookingPage(): JSX.Element {
     setLoading(true);
     try {
       const result = await createPublicBooking(payload, crypto.randomUUID());
-      setMessage(`Reserva creada. Estado: ${result.estado}. Guardá este enlace para gestionarla.`);
+      setCheckout(result.checkout_url ?? "");
+      setMessage(
+        result.checkout_url
+          ? "Reserva creada. Pagá la seña para confirmar el turno; si no se acredita, el turno se libera."
+          : "Reserva creada. Guardá este enlace para gestionarla.",
+      );
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : "No pudimos crear la reserva. El horario puede haberse ocupado.");
     } finally {
@@ -106,7 +115,12 @@ export function PublicBookingPage(): JSX.Element {
         prestacion_id: serviceId,
         inicio: slot,
       });
-      setActionResult(`Reprogramación solicitada. Estado: ${result.estado}.`);
+      setCheckout(result.checkout_url ?? "");
+      setActionResult(
+        result.checkout_url
+          ? "Reprogramación solicitada. La seña quedó pendiente de pago para el nuevo turno."
+          : "Reprogramación solicitada. La seña acreditada se arrastra al nuevo turno.",
+      );
     } catch (error) {
       const detail = error instanceof ApiError && error.alternativas?.length
         ? ` Opciones: ${error.alternativas.map((item) => new Date(item).toLocaleString("es-AR")).join(", ")}`
@@ -142,11 +156,27 @@ export function PublicBookingPage(): JSX.Element {
       </label>
       <label>
         Prestación
-        <select value={serviceId} onChange={(event) => setServiceId(event.target.value)}>
+        <select value={serviceId} onChange={(event) => { setServiceId(event.target.value); setCheckout(""); }}>
           <option value="">Seleccioná</option>
-          {data?.services.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+          {data?.services.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.nombre}{item.senia_requerida ? " (requiere seña)" : ""}
+            </option>
+          ))}
         </select>
       </label>
+      {requiereSena && (
+        <p role="note">
+          Esta prestación{prestacionSeleccionada?.senia_monto_cents
+            ? ` requiere una seña de ${prestacionSeleccionada.senia_monto_cents / 100} $`
+            : " requiere una seña"}; se paga por Mercado Pago al reservar y se devuelve o arrastra según la política del consultorio.
+        </p>
+      )}
+      {checkoutUrl && (
+        <p>
+          <a href={checkoutUrl}>Pagar seña por Mercado Pago</a>
+        </p>
+      )}
       <form onSubmit={(event) => void submit(event)}>
         <label>Nombre<input required value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} /></label>
         <label>Apellido<input required value={form.apellido} onChange={(event) => setForm({ ...form, apellido: event.target.value })} /></label>

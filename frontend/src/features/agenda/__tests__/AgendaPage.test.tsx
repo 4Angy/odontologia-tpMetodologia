@@ -257,6 +257,19 @@ describe("AgendaPage", () => {
     await waitFor(() => expect(mocks.consultarAgenda).toHaveBeenCalledTimes(2));
   });
 
+  it("avisa el arrastre de la seña al reprogramar un turno con seña", async () => {
+    mocks.consultarAgenda.mockResolvedValue([{ ...turno, senia_id: "senia-1" }]);
+    render(<AgendaPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Reprogramar" }),
+    );
+    expect(
+      await screen.findByText(/se arrastra al nuevo horario|saldo a favor/i),
+    ).toBeInTheDocument();
+    expect(mocks.reprogramarTurno).not.toHaveBeenCalled();
+  });
+
   it("mantiene el estado guardado y muestra error si falla una acción", async () => {
     mocks.ejecutarAccionTurno.mockRejectedValue(
       new ApiError(

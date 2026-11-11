@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -105,6 +105,9 @@ class PrestacionCreate(Strict):
     duracion_min: int = Field(ge=5, le=240, strict=True)
     precio_ref: int | None = Field(default=None, ge=0, strict=True)
     activa: bool = True
+    # C-12: seña por prestación (override de `config.senia_requerida`).
+    senia_requerida: bool | None = None
+    senia_monto_cents: int | None = Field(default=None, ge=0, strict=True)
 
 
 class PrestacionResponse(PrestacionCreate):
@@ -170,6 +173,8 @@ class ConfigResponse(Strict):
     recordatorio_1_hs: int = 48
     recordatorio_2_hs: int = 24
     whatsapp_costo_centavos: int = 0
+    # C-12 (RN-CO-03): política de devolución de la seño.
+    politica_devolucion_senia: Literal["no_devuelve", "devuelve_50", "devuelve_100"] = "devuelve_100"
 
 
 class ConfigUpdateRequest(Strict):
@@ -180,3 +185,4 @@ class ConfigUpdateRequest(Strict):
     recordatorio_1_hs: int | None = Field(default=None, ge=0)
     recordatorio_2_hs: int | None = Field(default=None, ge=0)
     whatsapp_costo_centavos: int | None = Field(default=None, ge=0)
+    politica_devolucion_senia: Literal["no_devuelve", "devuelve_50", "devuelve_100"] | None = None

@@ -98,3 +98,25 @@ class DeudaResponse(Strict):
     nombre: str
     apellido: str
     saldo_cents: int
+
+
+# ---------- Señas Mercado Pago (C-12) ----------
+
+PoliticaDevolucion = Literal["no_devuelve", "devuelve_50", "devuelve_100"]
+EstadoSenia = Literal["pendiente", "acreditada", "devuelta", "aplicada"]
+
+
+class SeniaResponse(Strict):
+    id: str
+    tenant_id: str
+    turno_id: str
+    paciente_id: str
+    monto_cents: int
+    monto_afavor_cents: int | None = None
+    estado: EstadoSenia
+    mp_preference_id: str
+    mp_payment_id: str | None = None
+    checkout_url: str | None = None
+    acreditada_at: datetime | None = None
+    created_at: datetime
+    updated_at: datetime

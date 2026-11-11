@@ -4,6 +4,9 @@ export interface PublicCatalogItem {
   id: string;
   nombre: string;
   duracion_min?: number;
+  /** C-12: la reserva exige seña por Mercado Pago. */
+  senia_requerida?: boolean;
+  senia_monto_cents?: number | null;
 }
 
 export interface PublicAvailability {

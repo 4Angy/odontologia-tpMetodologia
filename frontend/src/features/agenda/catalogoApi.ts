@@ -23,6 +23,9 @@ export interface Prestacion {
   duracion_min: number;
   precio_ref: number | null;
   activa: boolean;
+  /** Override de seña por prestación (C-12); null = usa la config global. */
+  senia_requerida: boolean | null;
+  senia_monto_cents: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +35,8 @@ export interface PrestacionInput {
   duracion_min: number;
   precio_ref: number | null;
   activa: boolean;
+  senia_requerida: boolean | null;
+  senia_monto_cents: number | null;
 }
 
 export interface Bloqueo {
@@ -52,11 +57,14 @@ export interface BloqueoInput {
   motivo: string | null;
 }
 
+export type PoliticaDevolucionSenia = "no_devuelve" | "devuelve_50" | "devuelve_100";
+
 export interface ConfiguracionAgenda {
   antelacion_cancel_hs: number;
   antelacion_reserva_hs: number;
   recordatorio_t_48h: boolean;
   recordatorio_t_24h: boolean;
+  politica_devolucion_senia: PoliticaDevolucionSenia;
 }
 
 export interface HorarioSemanal {

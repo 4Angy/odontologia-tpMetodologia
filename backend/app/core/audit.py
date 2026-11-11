@@ -25,6 +25,7 @@ class AuditEventModel(Base):
     recurso_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     campos: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     consentimiento_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    rol_activo: Mapped[str | None] = mapped_column(String(32), nullable=True)
     invalidated_destination_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ocurrido_at: Mapped[datetime] = mapped_column(
         AwareDateTime(), nullable=False, default=lambda: datetime.now(timezone.utc), index=True
@@ -42,7 +43,19 @@ def registrar_auditoria(
     campos: list[str],
     consentimiento_version: str | None = None,
     invalidated_destination_hash: str | None = None,
+    rol_activo: str | None = None,
 ) -> AuditEventModel:
+    if rol_activo is None and actor_id:
+        try:
+            from app.modules.agenda.models import UsuarioModel
+
+            usuario = session.get(UsuarioModel, actor_id)
+            if usuario is not None and getattr(usuario, "roles", None):
+                roles = usuario.roles
+                if isinstance(roles, (list, tuple)) and roles:
+                    rol_activo = roles[0]
+        except Exception:  # noqa: BLE001 - auditoría no debe fallar por lookup de rol
+            rol_activo = None
     event = AuditEventModel(
         tenant_id=tenant_id,
         actor_id=actor_id,
@@ -52,6 +65,7 @@ def registrar_auditoria(
         campos=sorted(set(campos)),
         consentimiento_version=consentimiento_version,
         invalidated_destination_hash=invalidated_destination_hash,
+        rol_activo=rol_activo,
         ocurrido_at=datetime.now(timezone.utc),
     )
     session.add(event)

@@ -38,7 +38,7 @@ from app.modules.pacientes.service import (
 
 router = APIRouter(prefix="/pacientes", tags=["pacientes"])
 export_router = APIRouter(tags=["exportacion"])
-audit_router = APIRouter(tags=["auditoria"])
+from app.core.audit_router import audit_router  # compat: re-exportado a nivel app (C-13)
 
 
 def _as_response(paciente, saldo: int) -> PacienteResponse:

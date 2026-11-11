@@ -68,6 +68,7 @@ ENV_BY_FIELD: dict[str, str] = {
     "mp_webhook_secret": "MP_WEBHOOK_SECRET",
     "smtp_url": "SMTP_URL",
     "public_base_url": "PUBLIC_BASE_URL",
+    "cors_origins": "CORS_ORIGINS",
     "seed_demo": "SEED_DEMO",
     "attachments_s3_bucket": "ATTACHMENTS_S3_BUCKET",
     "attachments_s3_endpoint_url": "ATTACHMENTS_S3_ENDPOINT_URL",
@@ -130,6 +131,9 @@ class Settings(BaseSettings):
 
     # --- Varios -------------------------------------------------------------
     public_base_url: str = "http://localhost:5173"
+    # Orígenes permitidos por CORS, separados por coma. En producción debe
+    # incluir el dominio público (PUBLIC_BASE_URL) y cualquier origen extra.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     seed_demo: bool = False
     attachments_s3_bucket: str | None = None
     attachments_s3_endpoint_url: str | None = None

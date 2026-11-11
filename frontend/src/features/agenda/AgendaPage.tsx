@@ -11,7 +11,7 @@ import {
   ejecutarAccionTurno,
   reprogramarTurno,
 } from "./api";
-import type { TurnoAgenda } from "./api";
+import type { TurnoAgenda, TurnoCancelado } from "./api";
 import {
   listarPrestaciones,
   listarProfesionales,
@@ -720,7 +720,11 @@ export function AgendaPage(): JSX.Element {
                     </p>
                   )}
                   {turno.motivo !== null && (
-                    <p className="agenda-motivo">{turno.motivo}</p>
+                    <p className="agenda-motivo">
+                      {turno.motivo.startsWith("public:")
+                        ? "Reserva en línea (enlace de gestión)"
+                        : turno.motivo}
+                    </p>
                   )}
                 </div>
                 <span className={`agenda-estado agenda-estado-${turno.estado}`}>
@@ -770,6 +774,16 @@ export function AgendaPage(): JSX.Element {
                       ["confirmado", "pendiente_confirmacion"].includes(turno.estado) && (
                         <CancelarTurnoButton
                           turnoId={turno.id}
+                          cancelarTurno={(turnoId, motivo) =>
+                            request<TurnoCancelado>(
+                              `/turnos/${encodeURIComponent(turnoId)}/cancelar`,
+                              {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ motivo }),
+                              },
+                            )
+                          }
                           onReprogramar={
                             puedeGestionar ? () => iniciarReprogramacion(turno) : undefined
                           }
@@ -786,6 +800,12 @@ export function AgendaPage(): JSX.Element {
                     className="agenda-reprogramar"
                     onSubmit={(event) => void guardarReprogramacion(event, turno)}
                   >
+                    {turno.senia_id !== null && (
+                      <p className="agenda-senia-aviso">
+                        Este turno tiene una seña de Mercado Pago asociada; se arrastra al nuevo
+                        horario o queda como saldo a favor del paciente.
+                      </p>
+                    )}
                     <label>
                       Nuevo inicio
                       <input

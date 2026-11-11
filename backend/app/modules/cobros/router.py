@@ -16,8 +16,10 @@ from app.modules.cobros.schemas import (
     CobroResponse,
     CobroUpdate,
     DeudaResponse,
+    SeniaResponse,
 )
 from app.modules.cobros.service import CobroService
+from app.modules.cobros.senias_service import SeniaService
 
 router = APIRouter(tags=["cobros"])
 
@@ -159,3 +161,70 @@ def ajustar_caja(
 ):
     CobroService(session).ajuste(user.tenant_id, user.id, payload)
     return Response(status_code=204)
+
+
+# ---------- Señas Mercado Pago (C-12) ----------
+
+
+def _as_senia_response(senia) -> SeniaResponse:
+    return SeniaResponse(
+        id=senia.id,
+        tenant_id=senia.tenant_id,
+        turno_id=senia.turno_id,
+        paciente_id=senia.paciente_id,
+        monto_cents=senia.monto_cents,
+        monto_afavor_cents=senia.monto_afavor_cents,
+        estado=senia.estado,
+        mp_preference_id=senia.mp_preference_id,
+        mp_payment_id=senia.mp_payment_id,
+        checkout_url=None,
+        acreditada_at=senia.acreditada_at,
+        created_at=senia.created_at,
+        updated_at=senia.updated_at,
+    )
+
+
+@router.get("/senias", response_model=list[SeniaResponse])
+def listar_senias(
+    turno_id: str | None = Query(default=None),
+    paciente_id: str | None = Query(default=None),
+    user=Depends(require_roles("recepcion", "odontologo", "dueno")),
+    session: Session = Depends(deps.get_session),
+):
+    servicio = SeniaService(session)
+    if turno_id is not None:
+        lista = [servicio.get_by_turno(user.tenant_id, turno_id)]
+        if lista[0] is None:
+            return []
+    elif paciente_id is not None:
+        from sqlalchemy import select
+
+        from app.modules.cobros.models import SeniaModel
+
+        lista = list(
+            session.execute(
+                select(SeniaModel).where(
+                    SeniaModel.tenant_id == user.tenant_id,
+                    SeniaModel.paciente_id == paciente_id,
+                    SeniaModel.deleted_at.is_(None),
+                )
+            ).scalars()
+        )
+    else:
+        return []
+    return [_as_senia_response(s) for s in lista if s is not None]
+
+
+@router.get("/senias/{senia_id}", response_model=SeniaResponse)
+def obtener_senia(
+    senia_id: str,
+    user=Depends(require_roles("recepcion", "odontologo", "dueno")),
+    session: Session = Depends(deps.get_session),
+):
+    senia = SeniaService(session).get(user.tenant_id, senia_id)
+    if senia is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "RN-AU-01", "message": "Seña no encontrada."},
+        )
+    return _as_senia_response(senia)

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app import deps
+from app.core.audit import registrar_auditoria
 from app.core.security import AuthUser, require_auth, require_roles
 from app.modules.agenda.models import TurnoModel
 from app.modules.lista_espera.models import ListaEsperaModel
@@ -63,6 +64,17 @@ def crear_lista_espera(
     )
     session.add(entry)
     session.flush()
+    registrar_auditoria(
+        session,
+        tenant_id=user.tenant_id,
+        actor_id=user.id,
+        accion="lista_espera.creada",
+        recurso="lista_espera",
+        recurso_id=entry.id,
+        campos=["paciente_id", "profesional_id", "prestacion_id", "prioridad"],
+        rol_activo=user.roles[0] if user.roles else None,
+    )
+    session.commit()
     return _a_respuesta(entry)
 
 
@@ -108,6 +120,16 @@ def ofrecer_manual(
         # si se ofrecio otra entrada, devolver la original sin cambios
         session.rollback()
         raise HTTPException(status_code=409, detail={"code": "RN-AG-03", "message": "No se pudo ofrecer esta entrada."})
+    registrar_auditoria(
+        session,
+        tenant_id=user.tenant_id,
+        actor_id=user.id,
+        accion="lista_espera.ofrecida",
+        recurso="lista_espera",
+        recurso_id=offered.id,
+        campos=["estado"],
+        rol_activo=user.roles[0] if user.roles else None,
+    )
     session.commit()
     return _a_respuesta(offered)
 

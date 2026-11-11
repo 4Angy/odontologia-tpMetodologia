@@ -72,6 +72,8 @@ function respuestaCatalogos(
         duracion_min: datos["duracion_min"] ?? 30,
         precio_ref: datos["precio_ref"] ?? null,
         activa: datos["activa"] ?? true,
+        senia_requerida: datos["senia_requerida"] ?? null,
+        senia_monto_cents: datos["senia_monto_cents"] ?? null,
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
       };
@@ -90,11 +92,15 @@ function respuestaCatalogos(
     if (url.endsWith("/prestaciones")) return respuesta(prestacion === null ? [] : [prestacion]);
     if (url.endsWith("/bloqueos")) return respuesta([]);
     if (url.endsWith("/config")) {
+      const datos = init?.method === "PUT"
+        ? (JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>)
+        : {};
       return respuesta({
-        antelacion_cancel_hs: 24,
-        antelacion_reserva_hs: 2,
-        recordatorio_t_48h: true,
-        recordatorio_t_24h: true,
+        antelacion_cancel_hs: datos["antelacion_cancel_hs"] ?? 24,
+        antelacion_reserva_hs: datos["antelacion_reserva_hs"] ?? 2,
+        recordatorio_t_48h: datos["recordatorio_t_48h"] ?? true,
+        recordatorio_t_24h: datos["recordatorio_t_24h"] ?? true,
+        politica_devolucion_senia: datos["politica_devolucion_senia"] ?? "devuelve_100",
       });
     }
     return fetchImpl(input, init);
@@ -178,6 +184,8 @@ describe("catálogo y configuración de agenda", () => {
           duracion_min: 30,
           precio_ref: 15000,
           activa: true,
+          senia_requerida: null,
+          senia_monto_cents: null,
         }),
       }),
     ));
@@ -221,6 +229,95 @@ describe("catálogo y configuración de agenda", () => {
           antelacion_reserva_hs: 3,
           recordatorio_t_48h: true,
           recordatorio_t_24h: true,
+          politica_devolucion_senia: "devuelve_100",
+        }),
+      }),
+    ));
+  });
+
+  it("guarda la seña por prestación con override y monto en centavos", async () => {
+    const fetchImpl = respuestaCatalogos(vi.fn() as unknown as typeof fetch);
+    renderConfiguracion("recepcion", fetchImpl);
+
+    await screen.findByRole("heading", { name: /prestaciones/i });
+    fireEvent.change(screen.getByLabelText(/nombre de la prestación/i), {
+      target: { value: "Endodoncia" },
+    });
+    fireEvent.change(screen.getByLabelText(/duración \(minutos\)/i), {
+      target: { value: "45" },
+    });
+    fireEvent.change(screen.getByLabelText(/monto de la seña/i), {
+      target: { value: "5000" },
+    });
+    fireEvent.change(screen.getByLabelText(/seña del turno/i), {
+      target: { value: "si" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /guardar prestación/i }));
+    expect(await screen.findByText("Prestación creada.")).toBeInTheDocument();
+
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/prestaciones"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          nombre: "Endodoncia",
+          duracion_min: 45,
+          precio_ref: null,
+          activa: true,
+          senia_requerida: true,
+          senia_monto_cents: 5000,
+        }),
+      }),
+    ));
+    expect(await screen.findByText(/seña \$\s?50,00 \(requerida\)/i)).toBeInTheDocument();
+  });
+
+  it("descarta el monto de seña cuando la prestación no requiere seña", async () => {
+    const fetchImpl = respuestaCatalogos(vi.fn() as unknown as typeof fetch);
+    renderConfiguracion("recepcion", fetchImpl);
+
+    await screen.findByRole("heading", { name: /prestaciones/i });
+    fireEvent.change(screen.getByLabelText(/nombre de la prestación/i), {
+      target: { value: "Consulta" },
+    });
+    fireEvent.change(screen.getByLabelText(/duración \(minutos\)/i), {
+      target: { value: "30" },
+    });
+    fireEvent.change(screen.getByLabelText(/monto de la seña/i), {
+      target: { value: "5000" },
+    });
+    fireEvent.change(screen.getByLabelText(/seña del turno/i), {
+      target: { value: "no" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /guardar prestación/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/no requiere seña/i);
+    expect(fetchImpl).not.toHaveBeenCalledWith(
+      expect.stringContaining("/prestaciones"),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("permite al dueño elegir la política de devolución de seña", async () => {
+    const fetchImpl = respuestaCatalogos(vi.fn() as unknown as typeof fetch);
+    renderConfiguracion("dueno", fetchImpl);
+
+    expect(await screen.findByLabelText(/política de devolución de seña/i)).toHaveValue("devuelve_100");
+    fireEvent.change(screen.getByLabelText(/política de devolución de seña/i), {
+      target: { value: "devuelve_50" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /guardar configuración/i }));
+
+    await waitFor(() => expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("/config"),
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          antelacion_cancel_hs: 24,
+          antelacion_reserva_hs: 2,
+          recordatorio_t_48h: true,
+          recordatorio_t_24h: true,
+          politica_devolucion_senia: "devuelve_50",
         }),
       }),
     ));

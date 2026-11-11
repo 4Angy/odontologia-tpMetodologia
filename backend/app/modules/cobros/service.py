@@ -150,6 +150,14 @@ class CobroService:
         ).scalar_one()
         return int(value)
 
+    def _senias_del_paciente(self, tenant_id: str, paciente_id: str) -> int:
+        """C-12: pago a favor por señas MP (acreditada/aplicada + crédito de `devuelta`)."""
+        from app.modules.cobros.senias_service import SeniaService
+
+        return SeniaService(self.session).total_afavor_paciente(
+            tenant_id, paciente_id
+        )
+
     def saldo_derivado(self, tenant_id: str, paciente_id: str) -> int:
         cargos = self.session.execute(
             select(func.coalesce(func.sum(PresupuestoModel.total_cents), 0)).where(
@@ -159,7 +167,9 @@ class CobroService:
                 PresupuestoModel.deleted_at.is_(None),
             )
         ).scalar_one()
-        return int(cargos) - self._pagos_del_paciente(tenant_id, paciente_id)
+        pagos = self._pagos_del_paciente(tenant_id, paciente_id)
+        senias = self._senias_del_paciente(tenant_id, paciente_id)
+        return int(cargos) - pagos - senias
 
     def listar_deudas(
         self, tenant_id: str, orden: Literal["antiguedad", "monto"] = "antiguedad"
