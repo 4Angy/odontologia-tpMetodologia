@@ -92,7 +92,10 @@ class Settings(BaseSettings):
     """Configuración tipada del backend."""
 
     model_config = SettingsConfigDict(
-        env_file=(".env", "../.env"),
+        # `../.env` (raíz, pensado para docker compose) primero y `.env` local
+        # del backend después: en pydantic-settings el último archivo pisa al
+        # anterior, así que la config local de backend/ gana fuera de compose.
+        env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
         # `extra="ignore"`: el entorno del proceso puede traer variables ajenas.
         extra="ignore",

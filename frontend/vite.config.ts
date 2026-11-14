@@ -2,7 +2,9 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import type { ProxyOptions } from "vite";
 
-const API = "http://localhost:8000";
+// 127.0.0.1 y no "localhost": en Windows `localhost` puede resolver a ::1
+// primero y caer en otro servicio que ocupe el puerto (ej. un container Docker).
+const API = "http://127.0.0.1:8000";
 
 // La SPA y la API comparten prefijos de ruta (`/agenda`, `/pacientes`, `/r/...`).
 // La navegación del navegador (Accept: text/html) debe servir `index.html`;
