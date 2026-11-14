@@ -31,7 +31,7 @@ docker run -d --name odontologia-test-pg \
   -e POSTGRES_DB=odontologia_test -p 55432:5432 postgres:16
 ```
 
-### Backend (75 tests)
+### Backend (219 tests)
 
 ```bash
 cd backend
@@ -46,9 +46,9 @@ pip install -r requirements.txt
 python -m pytest
 ```
 
-Se espera: `75 passed`. Los tests deben correrse desde `backend/` (el paquete `app` solo es importable desde ahí).
+Se espera: `219 passed`. Los tests deben correrse desde `backend/` (el paquete `app` solo es importable desde ahí).
 
-### Frontend (10 tests + typecheck + build)
+### Frontend (64 tests + typecheck + build)
 
 ```bash
 cd frontend
@@ -58,7 +58,68 @@ npx tsc --noEmit
 npm run build
 ```
 
-Se espera: `10 passed`, typecheck sin errores y build de producción OK.
+Se espera: `63 passed` + **1 fallo conocido y preexistente** en `src/features/public/__tests__/api.test.ts` (encoding de rutas públicas `/public/turnos/{token}/...`, ajeno a la UI), typecheck sin errores y build de producción OK.
+
+## Levantar la app completa (demo local)
+
+Stack completo con Docker Compose: `api` (FastAPI :8000) + `worker` + `postgres:16` + `redis:7`.
+
+```bash
+# 1. Variables de entorno (una sola vez)
+cp .env.example .env
+# Completar en .env:
+#   JWT_SECRET=<openssl rand -hex 32>
+#   POSTGRES_PASSWORD=odontologia        (dev local)
+#   SEED_DEMO=true                        (siembra tenant + datos demo)
+
+# 2. Levantar todo
+docker compose up -d --build
+curl http://localhost:8000/health        # {"status":"ok"}
+curl http://localhost:8000/health/ready  # database + redis ok
+```
+
+El servicio `api` aplica las migraciones Alembic y ejecuta el seed demo al arrancar (`SEED_DEMO=true`).
+
+### Usuarios demo
+
+| Email | Password | Rol |
+|---|---|---|
+| `recepcion@demo.com` | `demo1234` | recepción |
+| `odontologo@demo.com` | `demo1234` | odontólogo |
+| `dueno@demo.com` | `demo1234` | dueño |
+| `multi@demo.com` | `demo1234` | los tres roles |
+
+> El seed crea los usuarios **sin password** (a propósito). Asignarla una vez:
+>
+> ```bash
+> docker compose exec api python -c "
+> from sqlalchemy import create_engine
+> from sqlalchemy.orm import sessionmaker
+> from app.core.config import get_settings
+> from app.modules.agenda.models import UsuarioModel
+> from app.modules.auth.passwords import hash_password
+> engine = create_engine(get_settings().database_url)
+> with sessionmaker(bind=engine)() as s:
+>     for email in ['recepcion@demo.com','odontologo@demo.com','dueno@demo.com','multi@demo.com']:
+>         u = s.query(UsuarioModel).filter_by(email=email).first()
+>         u.password_hash = hash_password('demo1234')
+>     s.commit()
+> "
+> ```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173 — proxea la API a localhost:8000
+```
+
+Notas:
+
+- El proxy de Vite (`frontend/vite.config.ts`) reenvía los prefijos de API (`/auth`, `/agenda`, `/pacientes`, `/lista-espera`, `/export`, `/cobros`, etc.) a `:8000`; el resto sirve la SPA.
+- En Windows, `backend/docker-entrypoint.sh` debe tener fin de línea **LF** (CRLF rompe el entrypoint del contenedor).
+- Datos de prueba importables: [`samples/pacientes-demo.csv`](samples/pacientes-demo.csv) (20 pacientes sintéticos para el import CSV de Pacientes).
 
 ## Skills y MCP (TP de Metodología I)
 

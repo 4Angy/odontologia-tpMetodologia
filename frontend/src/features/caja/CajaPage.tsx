@@ -36,6 +36,23 @@ function mostrarError(error: unknown): string {
       : "No se pudo completar la operación. Probá de nuevo.";
 }
 
+const formatoMoneda = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+});
+
+function pesosACentavos(texto: string): number | null {
+  const normalizado = texto.trim().replace(",", ".");
+  if (normalizado === "") return null;
+  const pesos = Number(normalizado);
+  if (!Number.isFinite(pesos) || pesos <= 0) return null;
+  return Math.round(pesos * 100);
+}
+
+function centavosAPesos(centavos: number): string {
+  return formatoMoneda.format(centavos / 100);
+}
+
 export function CajaPage(): JSX.Element {
   const { request } = useAuth();
   const [cobros, setCobros] = useState<Cobro[]>([]);
@@ -45,7 +62,7 @@ export function CajaPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     paciente_id: "",
-    monto_cents: "",
+    monto: "",
     medio: "efectivo",
     concepto: "",
   });
@@ -70,18 +87,23 @@ export function CajaPage(): JSX.Element {
 
   async function registrarCobro(event: React.FormEvent): Promise<void> {
     event.preventDefault();
+    const montoCents = pesosACentavos(form.monto);
+    if (montoCents === null) {
+      setError("Ingresá un monto válido en pesos (ej: 1500,50).");
+      return;
+    }
     try {
       await request("/cobros", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paciente_id: form.paciente_id.trim(),
-          monto_cents: Number(form.monto_cents),
+          monto_cents: montoCents,
           medio: form.medio,
           concepto: form.concepto.trim(),
         }),
       });
-      setForm({ paciente_id: "", monto_cents: "", medio: "efectivo", concepto: "" });
+      setForm({ paciente_id: "", monto: "", medio: "efectivo", concepto: "" });
       setMensaje("Cobro registrado.");
       await cargar();
     } catch (err) {
@@ -126,12 +148,13 @@ export function CajaPage(): JSX.Element {
           />
         </label>
         <label>
-          Monto (centavos)
+          Monto
           <input
-            type="number"
-            min={0}
-            value={form.monto_cents}
-            onChange={(e) => setForm({ ...form, monto_cents: e.target.value })}
+            type="text"
+            inputMode="decimal"
+            placeholder="0,00"
+            value={form.monto}
+            onChange={(e) => setForm({ ...form, monto: e.target.value })}
             required
           />
         </label>
@@ -166,7 +189,7 @@ export function CajaPage(): JSX.Element {
           <ul>
             {deudas.map((deuda) => (
               <li key={deuda.paciente_id}>
-                {deuda.nombre} {deuda.apellido}: {deuda.saldo_cents} centavos
+                {deuda.nombre} {deuda.apellido}: {centavosAPesos(deuda.saldo_cents)}
               </li>
             ))}
           </ul>
@@ -181,7 +204,7 @@ export function CajaPage(): JSX.Element {
           <ul>
             {cobros.map((cobro) => (
               <li key={cobro.id}>
-                {cobro.concepto} — {cobro.monto_cents} centavos ({cobro.medio})
+                {cobro.concepto} — {centavosAPesos(cobro.monto_cents)} ({cobro.medio})
               </li>
             ))}
           </ul>
@@ -195,10 +218,10 @@ export function CajaPage(): JSX.Element {
         </button>
         {cierre ? (
           <div>
-            <p>Efectivo: {cierre.total_efectivo_cents}</p>
-            <p>Transferencia: {cierre.total_transferencia_cents}</p>
-            <p>Mercado Pago: {cierre.total_mp_cents}</p>
-            <p>Otro: {cierre.total_otro_cents}</p>
+            <p>Efectivo: {centavosAPesos(cierre.total_efectivo_cents)}</p>
+            <p>Transferencia: {centavosAPesos(cierre.total_transferencia_cents)}</p>
+            <p>Mercado Pago: {centavosAPesos(cierre.total_mp_cents)}</p>
+            <p>Otro: {centavosAPesos(cierre.total_otro_cents)}</p>
           </div>
         ) : null}
       </section>

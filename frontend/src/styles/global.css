@@ -1,0 +1,368 @@
+/* ============================================================
+   Estilos globales — Consultorio Odontológico
+   Paleta alineada con AgendaPage.css (#174f91). Solo CSS plano.
+   ============================================================ */
+
+:root {
+  --ui-ink: #17233b;
+  --ui-muted: #5b6b7f;
+  --ui-line: #d8e0ea;
+  --ui-bg: #f4f7fb;
+  --ui-surface: #ffffff;
+  --ui-accent: #174f91;
+  --ui-accent-hover: #103c70;
+  --ui-accent-soft: #e8f0f8;
+  --ui-danger: #8d2934;
+  --ui-danger-soft: #fbeaec;
+  --ui-warning: #744700;
+  --ui-warning-soft: #fdf3e0;
+  --ui-success: #145a43;
+  --ui-success-soft: #e6f4ee;
+  --ui-radius: 10px;
+  --ui-radius-sm: 7px;
+  --ui-shadow: 0 1px 2px rgb(23 35 59 / 6%), 0 4px 14px rgb(23 35 59 / 7%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ui-bg);
+  color: var(--ui-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+::selection {
+  color: #fff;
+  background: var(--ui-accent);
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ui-accent) 55%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- Tipografía ---------- */
+
+h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.02rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--ui-accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--ui-accent-hover);
+}
+
+small,
+.muted {
+  color: var(--ui-muted);
+}
+
+/* ---------- Utilidad sr-only ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Botones ---------- */
+
+button,
+input[type="submit"],
+input[type="button"] {
+  font: inherit;
+  min-height: 2.4rem;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  cursor: pointer;
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out;
+}
+
+button:hover:not(:disabled),
+input[type="submit"]:hover:not(:disabled),
+input[type="button"]:hover:not(:disabled) {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent-soft);
+}
+
+button:disabled,
+input[type="submit"]:disabled,
+input[type="button"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* El submit es la acción principal del formulario. */
+button[type="submit"],
+input[type="submit"] {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+button[type="submit"]:hover:not(:disabled),
+input[type="submit"]:hover:not(:disabled) {
+  border-color: var(--ui-accent-hover);
+  background: var(--ui-accent-hover);
+  color: #fff;
+}
+
+/* ---------- Formularios ---------- */
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  font: inherit;
+  width: 100%;
+  max-width: 34rem;
+  min-height: 2.4rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+}
+
+textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--ui-accent);
+  outline: 3px solid color-mix(in srgb, var(--ui-accent) 22%, transparent);
+  outline-offset: 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-ink);
+}
+
+fieldset {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  padding: 0.9rem 1rem 1rem;
+  margin: 0 0 1rem;
+}
+
+legend {
+  padding: 0 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* ---------- Tablas ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  overflow: hidden;
+  font-size: 0.92rem;
+}
+
+th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  background: #f0f4f9;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #e8edf3;
+  vertical-align: top;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: #f7fafd;
+}
+
+/* ---------- Estados (status / alert) ---------- */
+
+[role="status"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  background: var(--ui-surface);
+  color: var(--ui-muted);
+}
+
+[role="alert"] {
+  padding: 0.75rem 1rem;
+  border: 1px solid #eec9cd;
+  border-radius: var(--ui-radius);
+  background: var(--ui-danger-soft);
+  color: var(--ui-danger);
+}
+
+/* ---------- Shell ---------- */
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  padding: 0.7rem 1.5rem;
+  background: var(--ui-surface);
+  border-bottom: 1px solid var(--ui-line);
+  box-shadow: var(--ui-shadow);
+}
+
+.app-shell > header h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.app-shell > header h1::first-letter {
+  color: var(--ui-accent);
+}
+
+.app-shell nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-shell nav a {
+  display: inline-block;
+  padding: 0.42rem 0.8rem;
+  border-radius: 999px;
+  color: var(--ui-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 140ms ease-out, color 140ms ease-out;
+}
+
+.app-shell nav a:hover {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+}
+
+.app-shell nav a.active,
+.app-shell nav a[aria-current="page"] {
+  background: var(--ui-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.app-shell > header > button {
+  margin-left: auto;
+}
+
+.app-shell > main {
+  flex: 1;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 3rem;
+}
+
+/* ---------- Dialogs nativos ---------- */
+
+dialog {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius);
+  box-shadow: var(--ui-shadow);
+  max-width: 32rem;
+  padding: 1.25rem 1.5rem;
+}
+
+dialog::backdrop {
+  background: rgb(23 35 59 / 45%);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+  }
+
+  .app-shell > header {
+    padding: 0.6rem 1rem;
+  }
+
+  .app-shell > main {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+}

@@ -35,6 +35,8 @@ const API_PREFIXES = [
   "/bloqueos",
   "/config",
   "/senias",
+  "/lista-espera",
+  "/export",
 ] as const;
 
 export default defineConfig({

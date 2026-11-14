@@ -311,7 +311,7 @@ Paso │ Agente A (Backend Core)      │ Agente B (Backend Aux)         │ Age
 - **Riesgos**: **PA-01** (si C-01 eligió gateway artesanal: baneo/costo oculto) + SU-01 (sobre-invertir en WhatsApp si no es lo que decide la compra — validar con 5 entrevistas antes del Sprint 2); costo operativo (prioridad de calidad): plantillas y ventanas configurables para contener el gasto por tenant.
 
 ### [C-10] `lista-espera-automatica`
-- **Estado**: `[ ]` pendiente
+- **Estado**: `[x]` archivado (2026-11-08) — `openspec/changes/archive/2026-11-08-c-10-lista-espera-automatica/` (21/21 tareas)
 - **Scope**: Lista de espera con oferta automática por WhatsApp (US-005)
   - Modelo: `ListaEspera` (paciente, profesional nullable = cualquiera, prestación nullable, prioridad, `estado`: activa|ofrecida|convertida|vencida)
   - Endpoints: `POST /lista-espera` (alta), `GET /lista-espera` (cola auditable), acciones aceptar/declinar por token (reutiliza mecanismo C-08)
