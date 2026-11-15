@@ -31,7 +31,7 @@ docker run -d --name odontologia-test-pg \
   -e POSTGRES_DB=odontologia_test -p 55432:5432 postgres:16
 ```
 
-### Backend (219 tests)
+### Backend (267 tests + 1 skip)
 
 ```bash
 cd backend
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 python -m pytest
 ```
 
-Se espera: `219 passed`. Los tests deben correrse desde `backend/` (el paquete `app` solo es importable desde ahí).
+Se espera: `267 passed, 1 skipped` (el skip es un test que solo aplica al atajo SQLite). Los tests deben correrse desde `backend/` (el paquete `app` solo es importable desde ahí).
 
 ### Frontend (64 tests + typecheck + build)
 
@@ -58,7 +58,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-Se espera: `63 passed` + **1 fallo conocido y preexistente** en `src/features/public/__tests__/api.test.ts` (encoding de rutas públicas `/public/turnos/{token}/...`, ajeno a la UI), typecheck sin errores y build de producción OK.
+Se espera: `64 passed`, typecheck sin errores y build de producción OK.
 
 ## Levantar la app completa (demo local)
 
