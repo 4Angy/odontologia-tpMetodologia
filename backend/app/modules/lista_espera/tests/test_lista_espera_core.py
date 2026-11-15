@@ -10,6 +10,7 @@ from app.main import create_app
 from app.modules.agenda.models import (
     ConfigModel,
     ProfesionalModel,
+    ProfesionalModel,
     TenantModel,
     TurnoModel,
     UsuarioModel,
