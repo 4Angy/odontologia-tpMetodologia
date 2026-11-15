@@ -252,6 +252,40 @@ def create_app(
     app.include_router(mp_webhook_router)
     app.include_router(notificaciones_router)
     app.include_router(lista_espera_router)
+
+    # Esquema bearerAuth para Swagger UI: el auth real sigue siendo el header
+    # Authorization validado por require_auth; acá solo se declara en OpenAPI
+    # para que /docs muestre el botón Authorize y bloquee los endpoints
+    # privados. Los paths públicos quedan sin requisito de seguridad.
+    _PATHS_PUBLICOS = ("/health", "/auth/", "/webhooks/", "/r/", "/public/")
+
+    def _openapi_con_seguridad() -> dict[str, Any]:
+        if app.openapi_schema:
+            return app.openapi_schema
+        from fastapi.openapi.utils import get_openapi
+
+        schema = get_openapi(
+            title=app.title,
+            version=SERVICE_VERSION,
+            routes=app.routes,
+        )
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})[
+            "bearerAuth"
+        ] = {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+        for path, item in schema.get("paths", {}).items():
+            if path.startswith(_PATHS_PUBLICOS):
+                continue
+            for operacion in item.values():
+                if isinstance(operacion, dict):
+                    operacion["security"] = [{"bearerAuth": []}]
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = _openapi_con_seguridad
     return app
 
 
