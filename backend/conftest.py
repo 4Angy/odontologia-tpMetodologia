@@ -29,7 +29,10 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 # Variables mínimas para que la app sea arrancable en tests sin `.env`.
-os.environ.setdefault("APP_ENV", "test")
+# APP_ENV se fuerza (no setdefault): un `APP_ENV=dev` exportado en el shell
+# haría que get_rate_limiter() devuelva RedisRateLimiter y rompería tests
+# que asumen el limiter in-memory. Las demás ceden ante overrides explícitos.
+os.environ["APP_ENV"] = "test"
 os.environ.setdefault("JWT_SECRET", "t" * 64)
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)

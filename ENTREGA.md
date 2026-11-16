@@ -104,8 +104,8 @@ docker run -d --name odontologia-test-pg \
   -e POSTGRES_USER=odontologia -e POSTGRES_PASSWORD=odontologia \
   -e POSTGRES_DB=odontologia_test -p 55432:5432 postgres:16
 
-cd backend && pip install -r requirements.txt && python -m pytest     # 75 tests
-cd frontend && npm install && npm test && npm run typecheck && npm run build   # 10 tests
+cd backend && pip install -r requirements.txt && python -m pytest     # 267 tests (+1 skip)
+cd frontend && npm install && npm test && npm run typecheck && npm run build   # 64 tests
 ```
 
 ## 5. Empaquetado
